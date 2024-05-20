@@ -44,7 +44,6 @@ contract Stream is ReentrancyGuard {
     error TokenNotZero();
     error FriendZero();
     error StreamerZero();
-    error MeZero();
     error StreamNotExisting();
     error NoAllowableAmountToWithdraw();
     error NotFeeAddress();
@@ -103,18 +102,18 @@ contract Stream is ReentrancyGuard {
         emit StreamAllowed(msg.sender, token, friend, amount);
     }
 
-    function stream(address token, address streamer, address me) external nonReentrant {
+    function stream(address token, address streamer, address friend) external nonReentrant {
         if (token == address(0)) {
             revert TokenNotZero();
         }
         if (streamer == address(0)) {
             revert StreamerZero();
         }
-        if (me == address(0)) {
-            revert MeZero();
+        if (friend == address(0)) {
+            revert FriendZero();
         }
 
-        bytes32 hash = computeHash(streamer, token, me);
+        bytes32 hash = computeHash(streamer, token, friend);
         StreamDetails storage details = streamDetails[hash];
 
         if (details.streamer == address(0)) {
@@ -149,20 +148,20 @@ contract Stream is ReentrancyGuard {
 
         details.totalStreamed += allowableAmount;
         details.timestamp = currentTime;
-        IERC20(token).safeTransferFrom(streamer, me, allowableAmount);
+        IERC20(token).safeTransferFrom(streamer, friend, allowableAmount);
 
         if (fee > 0) {
             uint256 feeAmount = (allowableAmount * fee) / 1000;
             IERC20(token).safeTransferFrom(streamer, feeAddress, feeAmount);
         }
 
-        emit Streamed(token, streamer, me, allowableAmount);
+        emit Streamed(token, streamer, friend, allowableAmount);
     }
 
     function getAvailable(
         address token,
         address streamer,
-        address me
+        address friend
     ) external view returns (uint256) {
         if (token == address(0)) {
             revert TokenNotZero();
@@ -170,11 +169,11 @@ contract Stream is ReentrancyGuard {
         if (streamer == address(0)) {
             revert StreamerZero();
         }
-        if (me == address(0)) {
-            revert MeZero();
+        if (friend == address(0)) {
+            revert FriendZero();
         }
 
-        bytes32 hash = computeHash(streamer, token, me);
+        bytes32 hash = computeHash(streamer, token, friend);
         StreamDetails storage details = streamDetails[hash];
 
         if (details.streamer == address(0)) {
