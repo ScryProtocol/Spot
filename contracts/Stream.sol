@@ -129,14 +129,6 @@ contract Stream is ReentrancyGuard {
             allowableAmount = details.outstanding;
         }
 
-        if (elapsedTime < 1) {
-            details.outstanding +=
-                (elapsedTime / details.window) *
-                allowableAmount;
-            if (details.outstanding > details.allowable)
-                details.outstanding = details.allowable;
-            allowableAmount = details.outstanding;
-        }
 
         if (allowableAmount == 0) {
             revert NoAllowableAmountToWithdraw();
