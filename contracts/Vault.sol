@@ -5,14 +5,15 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
-contract Vault is IERC721Receiver {
+contract Vault2 is
+    IERC721Receiver // SPDX-License-Identifier: MIT
+{
     struct Transaction {
         address to;
         bytes data;
         uint256 timestamp;
         bool executed;
-                uint256 confirmations;
-
+        uint256 confirmations;
         uint256 amount;
     }
 
@@ -39,10 +40,19 @@ contract Vault is IERC721Receiver {
     uint public freeze;
     mapping(uint256 => mapping(address => bool)) public confirmed;
 
-    event TokenDeposited(address token, uint256 amount, address indexed depositor);
+    event TokenDeposited(
+        address token,
+        uint256 amount,
+        address indexed depositor
+    );
     event NFTDeposited(address nft, uint256 tokenId, address indexed depositor);
     event TokenWithdrawn(address token, uint256 amount);
-    event TransactionQueued(uint256 txIndex, address to, bytes data, uint256 amount);
+    event TransactionQueued(
+        uint256 txIndex,
+        address to,
+        bytes data,
+        uint256 amount
+    );
     event TransactionExecuted(uint256 txIndex, address to, bytes data);
     event TransactionConfirmed(uint256 txIndex, address confirmer);
 
@@ -61,7 +71,7 @@ contract Vault is IERC721Receiver {
         _;
     }
 
-    constructor(
+    function init(
         address _owner,
         string memory _name,
         address _recoveryAddress,
@@ -69,7 +79,8 @@ contract Vault is IERC721Receiver {
         uint256 _dailyLimit,
         uint256 _threshold,
         uint256 _delay
-    ) {
+    ) public {
+        require(owner == address(0), "Already initialized");
         owner = _owner;
         name = _name;
         recoveryAddress = _recoveryAddress;
@@ -87,7 +98,10 @@ contract Vault is IERC721Receiver {
         if (token == address(0)) {
             require(msg.value == amount, "Incorrect ETH amount");
         } else {
-            require(IERC20(token).transferFrom(msg.sender, address(this), amount), "Transfer failed");
+            require(
+                IERC20(token).transferFrom(msg.sender, address(this), amount),
+                "Transfer failed"
+            );
         }
         emit TokenDeposited(token, amount, msg.sender);
     }
@@ -97,19 +111,34 @@ contract Vault is IERC721Receiver {
         emit NFTDeposited(nft, tokenId, msg.sender);
     }
 
-    function withdrawToken(address to, address token, uint256 amount) public onlyOwner {
-        uint256 balance = token == address(0) ? address(this).balance : IERC20(token).balanceOf(address(this));
+    function withdrawToken(
+        address to,
+        address token,
+        uint256 amount
+    ) public onlyOwner {
+        uint256 balance = token == address(0)
+            ? address(this).balance
+            : IERC20(token).balanceOf(address(this));
         require(balance >= amount, "Insufficient balance");
         require(freeze == 0, "Freeze is active");
-        
+
         uint256 limitAmount = getLimitAmount(token);
-        uint256 timeSinceLastWithdrawal = block.timestamp - lastWithdrawTimestamp[token];
+        uint256 timeSinceLastWithdrawal = block.timestamp -
+            lastWithdrawTimestamp[token];
 
         if (timeSinceLastWithdrawal >= 1 days) {
             dailyWithdrawnAmount[token] = 0;
         }
 
-        uint256 remainingLimit = limitAmount + (timeSinceLastWithdrawal * limitAmount) / 1 days > dailyWithdrawnAmount[token] ? limitAmount + (timeSinceLastWithdrawal * limitAmount) / 1 days - dailyWithdrawnAmount[token] : 0;
+        uint256 remainingLimit = limitAmount +
+            (timeSinceLastWithdrawal * limitAmount) /
+            1 days >
+            dailyWithdrawnAmount[token]
+            ? limitAmount +
+                (timeSinceLastWithdrawal * limitAmount) /
+                1 days -
+                dailyWithdrawnAmount[token]
+            : 0;
         if (remainingLimit > limitAmount) {
             remainingLimit = limitAmount;
         }
@@ -124,42 +153,69 @@ contract Vault is IERC721Receiver {
         }
     }
 
-    function getLimit(address to, address token, uint256 amount) public view returns (uint) {
-        uint256 balance = token == address(0) ? address(this).balance : IERC20(token).balanceOf(address(this));
+    function getLimit(
+        address to,
+        address token,
+        uint256 amount
+    ) public view returns (uint) {
+        uint256 balance = token == address(0)
+            ? address(this).balance
+            : IERC20(token).balanceOf(address(this));
         require(balance >= amount, "Insufficient balance");
 
         uint256 limitAmount = getLimitAmount(token);
-        uint256 timeSinceLastWithdrawal = block.timestamp - lastWithdrawTimestamp[token];
+        uint256 timeSinceLastWithdrawal = block.timestamp -
+            lastWithdrawTimestamp[token];
         uint dailyWithdrawn = dailyWithdrawnAmount[token];
 
         if (timeSinceLastWithdrawal >= 1 days) {
             dailyWithdrawn = 0;
         }
 
-        uint256 remainingLimit = limitAmount + (timeSinceLastWithdrawal * limitAmount) / 1 days > dailyWithdrawnAmount[token] ? limitAmount + (timeSinceLastWithdrawal * limitAmount) / 1 days - dailyWithdrawnAmount[token] : 0;
+        uint256 remainingLimit = limitAmount +
+            (timeSinceLastWithdrawal * limitAmount) /
+            1 days >
+            dailyWithdrawnAmount[token]
+            ? limitAmount +
+                (timeSinceLastWithdrawal * limitAmount) /
+                1 days -
+                dailyWithdrawnAmount[token]
+            : 0;
         if (remainingLimit > limitAmount) {
             remainingLimit = limitAmount;
         }
 
         if (amount <= remainingLimit) {
-            return amount!=0?amount:remainingLimit;
+            return amount != 0 ? amount : remainingLimit;
         } else {
             return 0;
         }
     }
 
-    function queueWithdrawal(address token, address to, uint256 amount) internal {
+    function queueWithdrawal(
+        address token,
+        address to,
+        uint256 amount
+    ) internal {
         bytes memory data;
         if (token == address(0)) {
             data = "";
             queueTransaction(to, data, amount);
         } else {
-            data = abi.encodeWithSignature("transfer(address,uint256)", to, amount);
+            data = abi.encodeWithSignature(
+                "transfer(address,uint256)",
+                to,
+                amount
+            );
             queueTransaction(token, data, 0);
         }
     }
 
-    function queueTransaction(address to, bytes memory data, uint256 amount) public onlyOwner {
+    function queueTransaction(
+        address to,
+        bytes memory data,
+        uint256 amount
+    ) public onlyOwner {
         require(freeze == 0, "Freeze is active");
         Transaction storage newTransaction = queuedTransactions.push();
         newTransaction.to = to;
@@ -173,14 +229,20 @@ contract Vault is IERC721Receiver {
     }
 
     function confirmTransaction(uint256 txIndex) public {
-        require(msg.sender == owner || isWhitelisted[msg.sender], "Not authorized");
+        require(
+            msg.sender == owner || isWhitelisted[msg.sender],
+            "Not authorized"
+        );
         require(freeze <= 1, "Freeze is active");
         Transaction storage transaction = queuedTransactions[txIndex];
         require(transaction.timestamp != 0, "Transaction not found");
         require(!transaction.executed, "Transaction already executed");
-require(!confirmed[txIndex][msg.sender], "Transaction already confirmed by this address");
+        require(
+            !confirmed[txIndex][msg.sender],
+            "Transaction already confirmed by this address"
+        );
         transaction.confirmations += 1;
-confirmed[txIndex][msg.sender] = true;
+        confirmed[txIndex][msg.sender] = true;
         emit TransactionConfirmed(txIndex, msg.sender);
 
         if (transaction.confirmations >= threshold) {
@@ -190,18 +252,27 @@ confirmed[txIndex][msg.sender] = true;
 
     function executeTransaction(uint256 txIndex) internal {
         Transaction storage transaction = queuedTransactions[txIndex];
-        require(transaction.confirmations >= threshold, "Not enough confirmations");
+        require(
+            transaction.confirmations >= threshold,
+            "Not enough confirmations"
+        );
         require(!transaction.executed, "Transaction already executed");
 
         transaction.executed = true;
 
-        (bool success, ) = transaction.to.call{value: transaction.amount}(transaction.data);
+        (bool success, ) = transaction.to.call{value: transaction.amount}(
+            transaction.data
+        );
         require(success, "Transaction execution failed");
 
         emit TransactionExecuted(txIndex, transaction.to, transaction.data);
     }
 
-    function executeWithdrawal(address to, address token, uint256 amount) internal {
+    function executeWithdrawal(
+        address to,
+        address token,
+        uint256 amount
+    ) internal {
         if (token == address(0)) {
             (bool success, ) = to.call{value: amount}("");
             require(success, "Transfer failed");
@@ -212,8 +283,12 @@ confirmed[txIndex][msg.sender] = true;
 
         // Queue and execute a placeholder transaction
         Transaction storage newTransaction = queuedTransactions.push();
-        newTransaction.to = token!=address(0)?token:to;
-        newTransaction.data = abi.encode("transfer(address,uint256)", to, amount);
+        newTransaction.to = token != address(0) ? token : to;
+        newTransaction.data = abi.encode(
+            "transfer(address,uint256)",
+            to,
+            amount
+        );
         newTransaction.timestamp = block.timestamp;
         newTransaction.executed = true;
         newTransaction.amount = amount;
@@ -225,7 +300,9 @@ confirmed[txIndex][msg.sender] = true;
     }
 
     function getLimitAmount(address token) public view returns (uint256) {
-        uint256 balance = token == address(0) ? address(this).balance : IERC20(token).balanceOf(address(this));
+        uint256 balance = token == address(0)
+            ? address(this).balance
+            : IERC20(token).balanceOf(address(this));
         TokenLimit storage limit = tokenLimits[token];
         if (limit.fixedLimit > 0) {
             return limit.fixedLimit;
@@ -237,16 +314,24 @@ confirmed[txIndex][msg.sender] = true;
             return uint256(1000000000000000000000000000000);
         } else {
             return (balance * dailyLimit) / 100;
-        } 
+        }
     }
 
     function updateRecoveryAddress(address newRecoveryAddress) external {
-        require(msg.sender == address(this), "Can only be called by contract itself");
+        require(
+            msg.sender == address(this),
+            "Can only be called by contract itself"
+        );
         recoveryAddress = newRecoveryAddress;
     }
 
-    function updateWhitelistAddresses(address[] memory newWhitelistedAddresses) external {
-        require(msg.sender == address(this), "Can only be called by contract itself");
+    function updateWhitelistAddresses(
+        address[] memory newWhitelistedAddresses
+    ) external {
+        require(
+            msg.sender == address(this),
+            "Can only be called by contract itself"
+        );
         for (uint256 i = 0; i < whitelistedAddresses.length; i++) {
             isWhitelisted[whitelistedAddresses[i]] = false;
         }
@@ -257,22 +342,39 @@ confirmed[txIndex][msg.sender] = true;
     }
 
     function updateDailyLimit(uint256 newDailyLimit) external {
-        require(msg.sender == address(this), "Can only be called by contract itself");
+        require(
+            msg.sender == address(this),
+            "Can only be called by contract itself"
+        );
         dailyLimit = newDailyLimit;
     }
 
     function updateThreshold(uint256 newThreshold) external {
-        require(msg.sender == address(this), "Can only be called by contract itself");
+        require(
+            msg.sender == address(this),
+            "Can only be called by contract itself"
+        );
         threshold = newThreshold;
     }
 
     function updateDelay(uint256 newDelay) external {
-        require(msg.sender == address(this), "Can only be called by contract itself");
+        require(
+            msg.sender == address(this),
+            "Can only be called by contract itself"
+        );
         delay = newDelay;
     }
 
-    function setTokenLimit(address token, uint256 fixedLimit, uint256 percentageLimit, uint256 useBaseLimit) external {
-        require(msg.sender == address(this), "Can only be called by contract itself");
+    function setTokenLimit(
+        address token,
+        uint256 fixedLimit,
+        uint256 percentageLimit,
+        uint256 useBaseLimit
+    ) external {
+        require(
+            msg.sender == address(this),
+            "Can only be called by contract itself"
+        );
         require(useBaseLimit <= 2, "Invalid useBaseLimit value");
         tokenLimits[token] = TokenLimit({
             fixedLimit: fixedLimit,
@@ -280,10 +382,16 @@ confirmed[txIndex][msg.sender] = true;
             useBaseLimit: useBaseLimit
         });
     }
-function freezeLock(uint freezeL) external {
-        require(msg.sender == address(this) || msg.sender==owner||msg.sender==recoveryAddress||isWhitelisted[msg.sender], "Can only be called by contract itself, owner, recovery address or whitelisted addresses");
-        if (msg.sender != recoveryAddress ) {
-            require(freezeL>=freeze, "Cannot unfreeze");
+    function freezeLock(uint freezeL) external {
+        require(
+            msg.sender == address(this) ||
+                msg.sender == owner ||
+                msg.sender == recoveryAddress ||
+                isWhitelisted[msg.sender],
+            "Can only be called by contract itself, owner, recovery address or whitelisted addresses"
+        );
+        if (msg.sender != recoveryAddress) {
+            require(freezeL >= freeze, "Cannot unfreeze");
         }
         freeze = freezeL;
     }
@@ -291,13 +399,22 @@ function freezeLock(uint freezeL) external {
         // Accept ETH deposits
     }
 
-    function recover(address token, address to, uint256 amount, bytes memory data, uint freezeL) external onlyRecoveryAddress {
+    function recover(
+        address token,
+        address to,
+        uint256 amount,
+        bytes memory data,
+        uint freezeL
+    ) external onlyRecoveryAddress {
         if (token == address(0)) {
             require(address(this).balance >= amount, "Insufficient balance");
             (bool success, ) = to.call{value: amount}(data);
             require(success, "Transfer failed");
         } else {
-            require(IERC20(token).balanceOf(address(this)) >= amount, "Insufficient balance");
+            require(
+                IERC20(token).balanceOf(address(this)) >= amount,
+                "Insufficient balance"
+            );
             require(IERC20(token).transfer(to, amount), "Transfer failed");
         }
         emit TokenWithdrawn(token, amount);
@@ -315,7 +432,10 @@ function freezeLock(uint freezeL) external {
         uint256[] memory percentageLimits,
         uint256[] memory useBaseLimits
     ) external {
-        require(msg.sender == address(this) || msg.sender == recoveryAddress, "Not authorized");
+        require(
+            msg.sender == address(this) || msg.sender == recoveryAddress,
+            "Not authorized"
+        );
 
         if (newRecoveryAddress != address(0)) {
             recoveryAddress = newRecoveryAddress;
@@ -344,7 +464,12 @@ function freezeLock(uint freezeL) external {
         }
 
         if (tokens.length > 0) {
-            require(tokens.length == fixedLimits.length && tokens.length == percentageLimits.length && tokens.length == useBaseLimits.length, "Input arrays length mismatch");
+            require(
+                tokens.length == fixedLimits.length &&
+                    tokens.length == percentageLimits.length &&
+                    tokens.length == useBaseLimits.length,
+                "Input arrays length mismatch"
+            );
 
             for (uint256 i = 0; i < tokens.length; i++) {
                 require(useBaseLimits[i] <= 2, "Invalid useBaseLimit value");
@@ -357,26 +482,86 @@ function freezeLock(uint freezeL) external {
         }
     }
 
-    function onERC721Received(address _operator, address _from, uint256 _tokenId, bytes memory _data) external override returns (bytes4) {
+    function onERC721Received(
+        address _operator,
+        address _from,
+        uint256 _tokenId,
+        bytes memory _data
+    ) external override returns (bytes4) {
         return this.onERC721Received.selector;
     }
 }
 
-contract VaultFactory {
+contract SimpleProxy {
+    /// @notice The address of the implementation contract
+    address public immutable implementation;
+
+    /// @notice Constructor to set the implementation address
+    /// @param _implementation The address of the implementation contract
+    constructor(address _implementation) {
+        require(
+            _implementation != address(0),
+            "Invalid implementation address"
+        );
+        implementation = _implementation;
+    }
+
+    /// @notice Internal function to delegate calls to the implementation contract
+    /// @dev Uses inline assembly to perform the delegatecall
+    /// @param impl The address of the implementation contract
+    function _delegate(address impl) internal virtual {
+        assembly {
+            calldatacopy(0, 0, calldatasize())
+
+            let result := delegatecall(gas(), impl, 0, calldatasize(), 0, 0)
+
+            returndatacopy(0, 0, returndatasize())
+
+            switch result
+            case 0 {
+                revert(0, returndatasize())
+            }
+            default {
+                return(0, returndatasize())
+            }
+        }
+    }
+
+    /// @notice Fallback function to delegate all calls to the implementation contract
+    /// @dev This function will catch any call to the contract and forward it to the implementation
+    fallback() external payable virtual {
+        _delegate(implementation);
+    }
+
+    /// @notice Receive function to handle plain Ether transfers
+    /// @dev This function will catch any plain Ether transfers and forward them to the implementation
+    receive() external payable virtual {
+        _delegate(implementation);
+    }
+}
+
+contract VaultFactory2 {
     address public owner;
     uint256 public totalVaults;
+    address public vaultImplementation;
     mapping(string => address) public vaultNames;
     mapping(address => address[]) public ownerToVaults;
 
-    event VaultCreated(address vaultAddress, address indexed owner, string name, address recoveryAddress);
+    event VaultCreated(
+        address vaultAddress,
+        address indexed owner,
+        string name,
+        address recoveryAddress
+    );
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Not the owner");
         _;
     }
 
-    constructor() {
+    constructor(address _vaultImplementation) {
         owner = msg.sender;
+        vaultImplementation = _vaultImplementation;
     }
 
     function createVault(
@@ -389,7 +574,13 @@ contract VaultFactory {
     ) public returns (address) {
         require(vaultNames[_name] == address(0), "Vault name already exists");
 
-        Vault vault = new Vault(
+        bytes32 salt = keccak256(
+            abi.encodePacked(msg.sender, ownerToVaults[msg.sender].length)
+        );
+
+        SimpleProxy proxyc = new SimpleProxy{salt: salt}(vaultImplementation);
+        address proxy = address(proxyc);
+        Vault2(payable(proxy)).init(
             msg.sender,
             _name,
             _recoveryAddress,
@@ -398,18 +589,18 @@ contract VaultFactory {
             _threshold,
             _delay
         );
-        address vaultAddress = address(vault);
 
-        vaultNames[_name] = vaultAddress;
-        ownerToVaults[msg.sender].push(vaultAddress);
+        vaultNames[_name] = proxy;
+        ownerToVaults[msg.sender].push(proxy);
         totalVaults += 1;
 
-        emit VaultCreated(vaultAddress, msg.sender, _name, _recoveryAddress);
-        return vaultAddress;
+        emit VaultCreated(proxy, msg.sender, _name, _recoveryAddress);
+        return proxy;
     }
 
-    function getVaultsByOwner(address _owner) public view returns (address[] memory) {
+    function getVaultsByOwner(
+        address _owner
+    ) public view returns (address[] memory) {
         return ownerToVaults[_owner];
     }
-
 }
