@@ -5,9 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
-contract Vault2 is
-    IERC721Receiver // SPDX-License-Identifier: MIT
-{
+contract Vault is IERC721Receiver {
     struct Transaction {
         address to;
         bytes data;
@@ -71,7 +69,7 @@ contract Vault2 is
         _;
     }
 
-    function init(
+    constructor(
         address _owner,
         string memory _name,
         address _recoveryAddress,
@@ -79,8 +77,7 @@ contract Vault2 is
         uint256 _dailyLimit,
         uint256 _threshold,
         uint256 _delay
-    ) public {
-        require(owner == address(0), "Already initialized");
+    ) {
         owner = _owner;
         name = _name;
         recoveryAddress = _recoveryAddress;
@@ -237,12 +234,24 @@ contract Vault2 is
         Transaction storage transaction = queuedTransactions[txIndex];
         require(transaction.timestamp != 0, "Transaction not found");
         require(!transaction.executed, "Transaction already executed");
-        require(
-            !confirmed[txIndex][msg.sender],
-            "Transaction already confirmed by this address"
-        );
-        transaction.confirmations += 1;
-        confirmed[txIndex][msg.sender] = true;
+        if (
+            isWhitelisted[msg.sender] &&
+            !(msg.sender == owner &&
+                transaction.timestamp + delay <= block.timestamp)
+        ) {
+            require(
+                !confirmed[txIndex][msg.sender],
+                "Transaction already confirmed by this address"
+            );
+            transaction.confirmations += 1;
+            confirmed[txIndex][msg.sender] = true;
+        }
+        if (
+            msg.sender == owner &&
+            transaction.timestamp + delay <= block.timestamp
+        ) {
+            transaction.confirmations = threshold;
+        }
         emit TransactionConfirmed(txIndex, msg.sender);
 
         if (transaction.confirmations >= threshold) {
@@ -492,58 +501,9 @@ contract Vault2 is
     }
 }
 
-contract SimpleProxy {
-    /// @notice The address of the implementation contract
-    address public immutable implementation;
-
-    /// @notice Constructor to set the implementation address
-    /// @param _implementation The address of the implementation contract
-    constructor(address _implementation) {
-        require(
-            _implementation != address(0),
-            "Invalid implementation address"
-        );
-        implementation = _implementation;
-    }
-
-    /// @notice Internal function to delegate calls to the implementation contract
-    /// @dev Uses inline assembly to perform the delegatecall
-    /// @param impl The address of the implementation contract
-    function _delegate(address impl) internal virtual {
-        assembly {
-            calldatacopy(0, 0, calldatasize())
-
-            let result := delegatecall(gas(), impl, 0, calldatasize(), 0, 0)
-
-            returndatacopy(0, 0, returndatasize())
-
-            switch result
-            case 0 {
-                revert(0, returndatasize())
-            }
-            default {
-                return(0, returndatasize())
-            }
-        }
-    }
-
-    /// @notice Fallback function to delegate all calls to the implementation contract
-    /// @dev This function will catch any call to the contract and forward it to the implementation
-    fallback() external payable virtual {
-        _delegate(implementation);
-    }
-
-    /// @notice Receive function to handle plain Ether transfers
-    /// @dev This function will catch any plain Ether transfers and forward them to the implementation
-    receive() external payable virtual {
-        _delegate(implementation);
-    }
-}
-
-contract VaultFactory2 {
+contract VaultFactory {
     address public owner;
     uint256 public totalVaults;
-    address public vaultImplementation;
     mapping(string => address) public vaultNames;
     mapping(address => address[]) public ownerToVaults;
 
@@ -559,9 +519,8 @@ contract VaultFactory2 {
         _;
     }
 
-    constructor(address _vaultImplementation) {
+    constructor() {
         owner = msg.sender;
-        vaultImplementation = _vaultImplementation;
     }
 
     function createVault(
@@ -574,13 +533,7 @@ contract VaultFactory2 {
     ) public returns (address) {
         require(vaultNames[_name] == address(0), "Vault name already exists");
 
-        bytes32 salt = keccak256(
-            abi.encodePacked(msg.sender, ownerToVaults[msg.sender].length)
-        );
-
-        SimpleProxy proxyc = new SimpleProxy{salt: salt}(vaultImplementation);
-        address proxy = address(proxyc);
-        Vault2(payable(proxy)).init(
+        Vault vault = new Vault(
             msg.sender,
             _name,
             _recoveryAddress,
@@ -589,13 +542,14 @@ contract VaultFactory2 {
             _threshold,
             _delay
         );
+        address vaultAddress = address(vault);
 
-        vaultNames[_name] = proxy;
-        ownerToVaults[msg.sender].push(proxy);
+        vaultNames[_name] = vaultAddress;
+        ownerToVaults[msg.sender].push(vaultAddress);
         totalVaults += 1;
 
-        emit VaultCreated(proxy, msg.sender, _name, _recoveryAddress);
-        return proxy;
+        emit VaultCreated(vaultAddress, msg.sender, _name, _recoveryAddress);
+        return vaultAddress;
     }
 
     function getVaultsByOwner(
