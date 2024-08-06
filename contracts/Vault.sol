@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
-contract Vault is IERC721Receiver {
+contract Vault2 is IERC721Receiver {
     struct Transaction {
         address to;
         bytes data;
@@ -36,6 +36,7 @@ contract Vault is IERC721Receiver {
     Transaction[] public queuedTransactions;
     uint public queuedTxs;
     uint public freeze;
+    uint public version;
     mapping(uint256 => mapping(address => bool)) public confirmed;
 
     event TokenDeposited(
@@ -69,7 +70,7 @@ contract Vault is IERC721Receiver {
         _;
     }
 
-    constructor(
+    function init(
         address _owner,
         string memory _name,
         address _recoveryAddress,
@@ -77,14 +78,15 @@ contract Vault is IERC721Receiver {
         uint256 _dailyLimit,
         uint256 _threshold,
         uint256 _delay
-    ) {
+    ) public {
+        require(owner == address(0), "Already initialized");
         owner = _owner;
         name = _name;
         recoveryAddress = _recoveryAddress;
         dailyLimit = _dailyLimit;
         threshold = _threshold;
         delay = _delay;
-
+        version = 1;
         for (uint256 i = 0; i < _whitelistedAddresses.length; i++) {
             isWhitelisted[_whitelistedAddresses[i]] = true;
         }
@@ -143,7 +145,8 @@ contract Vault is IERC721Receiver {
         if (amount > remainingLimit) {
             queueWithdrawal(token, to, amount);
         } else {
-            dailyWithdrawnAmount[token] += amount;
+            dailyWithdrawnAmount[token] = limitAmount - remainingLimit + amount;
+            //            dailyWithdrawnAmount[token] += amount;
             lastWithdrawTimestamp[token] = block.timestamp;
 
             executeWithdrawal(to, token, amount);
@@ -258,6 +261,17 @@ contract Vault is IERC721Receiver {
             executeTransaction(txIndex);
         }
     }
+    function cancelTransaction(uint256 txIndex) public {
+        require(
+            msg.sender == owner || msg.sender == recoveryAddress,
+            "Not authorized"
+        );
+        Transaction storage transaction = queuedTransactions[txIndex];
+        require(transaction.timestamp != 0, "Transaction not found");
+        require(!transaction.executed, "Transaction already executed");
+        transaction.executed = true;
+        transaction.confirmations = 404;
+    }
 
     function executeTransaction(uint256 txIndex) internal {
         Transaction storage transaction = queuedTransactions[txIndex];
@@ -293,7 +307,7 @@ contract Vault is IERC721Receiver {
         // Queue and execute a placeholder transaction
         Transaction storage newTransaction = queuedTransactions.push();
         newTransaction.to = token != address(0) ? token : to;
-        newTransaction.data = abi.encode(
+        newTransaction.data = abi.encodeWithSignature(
             "transfer(address,uint256)",
             to,
             amount
@@ -501,9 +515,58 @@ contract Vault is IERC721Receiver {
     }
 }
 
-contract VaultFactory {
+contract SimpleProxy {
+    /// @notice The address of the implementation contract
+    address public immutable implementation;
+
+    /// @notice Constructor to set the implementation address
+    /// @param _implementation The address of the implementation contract
+    constructor(address _implementation) {
+        require(
+            _implementation != address(0),
+            "Invalid implementation address"
+        );
+        implementation = _implementation;
+    }
+
+    /// @notice Internal function to delegate calls to the implementation contract
+    /// @dev Uses inline assembly to perform the delegatecall
+    /// @param impl The address of the implementation contract
+    function _delegate(address impl) internal virtual {
+        assembly {
+            calldatacopy(0, 0, calldatasize())
+
+            let result := delegatecall(gas(), impl, 0, calldatasize(), 0, 0)
+
+            returndatacopy(0, 0, returndatasize())
+
+            switch result
+            case 0 {
+                revert(0, returndatasize())
+            }
+            default {
+                return(0, returndatasize())
+            }
+        }
+    }
+
+    /// @notice Fallback function to delegate all calls to the implementation contract
+    /// @dev This function will catch any call to the contract and forward it to the implementation
+    fallback() external payable virtual {
+        _delegate(implementation);
+    }
+
+    /// @notice Receive function to handle plain Ether transfers
+    /// @dev This function will catch any plain Ether transfers and forward them to the implementation
+    receive() external payable virtual {
+        _delegate(implementation);
+    }
+}
+
+contract VaultFactory2 {
     address public owner;
     uint256 public totalVaults;
+    address public vaultImplementation;
     mapping(string => address) public vaultNames;
     mapping(address => address[]) public ownerToVaults;
 
@@ -519,8 +582,9 @@ contract VaultFactory {
         _;
     }
 
-    constructor() {
+    constructor(address _vaultImplementation) {
         owner = msg.sender;
+        vaultImplementation = _vaultImplementation;
     }
 
     function createVault(
@@ -533,7 +597,13 @@ contract VaultFactory {
     ) public returns (address) {
         require(vaultNames[_name] == address(0), "Vault name already exists");
 
-        Vault vault = new Vault(
+        bytes32 salt = keccak256(
+            abi.encodePacked(msg.sender, ownerToVaults[msg.sender].length)
+        );
+
+        SimpleProxy proxyc = new SimpleProxy{salt: salt}(vaultImplementation);
+        address proxy = address(proxyc);
+        Vault2(payable(proxy)).init(
             msg.sender,
             _name,
             _recoveryAddress,
@@ -542,16 +612,19 @@ contract VaultFactory {
             _threshold,
             _delay
         );
-        address vaultAddress = address(vault);
 
-        vaultNames[_name] = vaultAddress;
-        ownerToVaults[msg.sender].push(vaultAddress);
+        vaultNames[_name] = proxy;
+        ownerToVaults[msg.sender].push(proxy);
         totalVaults += 1;
 
-        emit VaultCreated(vaultAddress, msg.sender, _name, _recoveryAddress);
-        return vaultAddress;
+        emit VaultCreated(proxy, msg.sender, _name, _recoveryAddress);
+        return proxy;
     }
-
+    function updateVaultImplementation(
+        address _vaultImplementation
+    ) public onlyOwner {
+        vaultImplementation = _vaultImplementation;
+    }
     function getVaultsByOwner(
         address _owner
     ) public view returns (address[] memory) {
