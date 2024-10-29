@@ -2,9 +2,8 @@
 pragma solidity 0.8.24;
 
 import { SafeERC20, IERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract Spot is ReentrancyGuard {
+contract Spot{
     using SafeERC20 for IERC20;
 
     struct BorrowDetails {
@@ -97,7 +96,7 @@ contract Spot is ReentrancyGuard {
         emit BorrowAllowed(msg.sender, token, friend, amount);
     }
 
-    function borrow(address token, address lender, uint256 amount) external nonReentrant {
+    function borrow(address token, address lender, uint256 amount) external{
         if (token == address(0)) {
             revert TokenNotZero();
         }
@@ -121,7 +120,7 @@ contract Spot is ReentrancyGuard {
         emit Borrowed(token, lender, msg.sender, amount);
     }
 
-    function repay(address token, address lender, uint256 amount) external nonReentrant {
+    function repay(address token, address lender, uint256 amount) external{
         if (token == address(0)) {
             revert TokenNotZero();
         }
