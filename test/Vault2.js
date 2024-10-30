@@ -17,15 +17,9 @@ describe("Vault System with Target Reference", function () {
         nft = await NFT.deploy("Mock NFT", "MNFT");
 
         // Deploy Vault2 implementation
-        Vault2 = await ethers.getContractFactory("Vault2");
+        Vault2 = await ethers.getContractFactory("Vault");
         vaultImplementation = await Vault2.deploy();
-
-        // Deploy the proxy
-        SimpleProxy = await ethers.getContractFactory("SimpleProxy");
-        vaultProxy = await SimpleProxy.deploy(vaultImplementation.target);
-
-        // Attach Vault2 interface to proxy address
-        vault = Vault2.attach(vaultProxy.target);
+        vault = Vault2.attach(vaultImplementation.target);
 
         // Initialize the vault
         await vault.connect(owner).init(
@@ -860,5 +854,536 @@ await vault.connect(owner).confirmTransaction(2);
     
     });
     
+    describe("Full Coverage Tests", function () {
+        // Test init cannot be called twice
+        it("should prevent re-initialization", async function () {
+            await expect(
+                vault.connect(owner).init(
+                    owner.address,
+                    "TestVault2",
+                    recoveryAddress.address,
+                    [addr1.address],
+                    dailyLimitPercentage,
+                    1,
+                    0
+                )
+            ).to.be.revertedWith("Already initialized");
+        });
+
+        // Test depositToken function for ETH
+        it("should allow depositing ETH", async function () {
+            await vault.connect(owner).depositToken(
+                ethers.ZeroAddress,
+                ethers.parseEther("1"),
+                { value: ethers.parseEther("1") }
+            );
+            const balance = await ethers.provider.getBalance(vault.target);
+            expect(balance).to.equal(ethers.parseEther("1"));
+        });
+
+        // Test depositToken function for ERC20 tokens
+        it("should allow depositing ERC20 tokens", async function () {
+            await token.connect(owner).approve(vault.target, ethers.parseUnits("100"));
+            await vault.connect(owner).depositToken(token.target, ethers.parseUnits("100"));
+            const balance = await token.balanceOf(vault.target);
+            expect(balance).to.equal(ethers.parseUnits("100"));
+        });
+
+        // Test depositNFT function
+        it("should allow depositing NFTs", async function () {
+            await nft.connect(owner).mint(owner.address, 1);
+            await nft.connect(owner).approve(vault.target, 1);
+            await vault.connect(owner).depositNFT(nft.target, 1);
+            expect(await nft.ownerOf(1)).to.equal(vault.target);
+        });
+
+        // Test withdrawToken function within daily limit
+        it("should allow owner to withdraw tokens within daily limit", async function () {
+            await token.connect(owner).approve(vault.target, ethers.parseUnits("100"));
+            await vault.connect(owner).depositToken(token.target, ethers.parseUnits("100"));
+
+            await expect(
+                vault.connect(owner).withdrawToken(addr1.address, token.target, ethers.parseUnits("10"))
+            ).to.emit(vault, "TokenWithdrawn");
+
+            const balance = await token.balanceOf(addr1.address);
+            expect(balance).to.equal(ethers.parseUnits("10"));
+        });
+
+        // Test withdrawToken function exceeding daily limit
+        it("should queue withdrawal if amount exceeds daily limit", async function () {
+            await token.connect(owner).approve(vault.target, ethers.parseUnits("100"));
+            await vault.connect(owner).depositToken(token.target, ethers.parseUnits("100"));
+
+            await expect(
+                vault.connect(owner).withdrawToken(addr1.address, token.target, ethers.parseUnits("20"))
+            ).to.emit(vault, "TransactionQueued");
+        });
+
+        // Test queueTransaction function
+        it("should allow owner to queue a transaction", async function () {
+            await expect(
+                vault.connect(owner).queueTransaction(
+                    vault.target,
+                    vault.interface.encodeFunctionData("updateDailyLimit", [15]),
+                    0
+                )
+            ).to.emit(vault, "TransactionQueued");
+        });
+
+        // Test confirmTransaction function by owner
+        it("should allow owner to confirm transaction after delay", async function () {
+            // Set delay
+            await vault.connect(owner).queueTransaction(
+                vault.target,
+                vault.interface.encodeFunctionData("updateDelay", [3600]), // 1 hour
+                0
+            );
+            await vault.connect(owner).confirmTransaction(0);
+
+            // Queue transaction
+            await vault.connect(owner).queueTransaction(
+                vault.target,
+                vault.interface.encodeFunctionData("updateDailyLimit", [15]),
+                0
+            );
+
+            // Fast-forward time
+            await ethers.provider.send("evm_increaseTime", [3600]);
+            await ethers.provider.send("evm_mine", []);
+
+            // Confirm transaction
+            await vault.connect(owner).confirmTransaction(1);
+
+            expect(await vault.dailyLimit()).to.equal(15);
+        });
+
+        // Test confirmTransaction function by whitelisted address
+        it("should allow whitelisted address to confirm transaction", async function () {
+           
+            // Queue transaction
+            await vault.connect(owner).queueTransaction(
+                vault.target,
+                vault.interface.encodeFunctionData("updateDailyLimit", [15]),
+                0
+            );
+
+            // Confirm by whitelisted address
+            await vault.connect(addr1).confirmTransaction(0);
+
+            expect(await vault.dailyLimit()).to.equal(15);
+        });
+
+        // Test cancelTransaction function
+        it("should allow owner or recovery address to cancel transaction", async function () {
+            // Queue transaction
+            await vault.connect(owner).queueTransaction(
+                vault.target,
+                vault.interface.encodeFunctionData("updateDailyLimit", [15]),
+                0
+            );
+
+            // Cancel by owner
+            await vault.connect(owner).cancelTransaction(0);
+
+            // Try to confirm canceled transaction
+            await expect(
+                vault.connect(owner).confirmTransaction(0)
+            ).to.be.revertedWith("Transaction already executed");
+        });
+
+        // Test freezeLock function by owner
+        it("should allow owner to increase freeze level", async function () {
+            await vault.connect(owner).freezeLock(1);
+            expect(await vault.freeze()).to.equal(1);
+        });
+
+        // Test freezeLock function by recovery address to decrease freeze level
+        it("should allow recovery address to decrease freeze level", async function () {
+            // Set freeze level to 2 by owner
+            await vault.connect(owner).freezeLock(2);
+
+            // Decrease freeze level by recovery address
+            await vault.connect(recoveryAddress).freezeLock(0);
+            expect(await vault.freeze()).to.equal(0);
+        });
+
+        // Test recover function
+        it("should allow recovery address to recover tokens and freeze vault", async function () {
+            await token.connect(owner).approve(vault.target, ethers.parseUnits("100"));
+            await vault.connect(owner).depositToken(token.target, ethers.parseUnits("100"));
+
+            await vault.connect(recoveryAddress).recover(
+                token.target,
+                recoveryAddress.address,
+                ethers.parseUnits("50"),
+                "0x",
+                2
+            );
+
+            const balance = await token.balanceOf(recoveryAddress.address);
+            expect(balance).to.equal(ethers.parseUnits("50"));
+
+            expect(await vault.freeze()).to.equal(2);
+        });
+
+        // Test updateSettings function via queued transaction
+        it("should allow updating settings via queued transaction", async function () {
+            // Queue transaction to update settings
+            await vault.connect(owner).queueTransaction(
+                vault.target,
+                vault.interface.encodeFunctionData("updateSettings", [
+                    addr2.address,     // newRecoveryAddress
+                    [addr1.address],   // newWhitelistedAddresses
+                    15,                // newDailyLimit
+                    2,                 // newThreshold
+                    3600,              // newDelay
+                    [],                // tokens
+                    [],                // fixedLimits
+                    [],                // percentageLimits
+                    []                 // useBaseLimits
+                ]),
+                0
+            );
+
+            // Confirm transaction
+            await vault.connect(owner).confirmTransaction(0);
+
+            expect(await vault.recoveryAddress()).to.equal(addr2.address);
+            expect(await vault.dailyLimit()).to.equal(15);
+            expect(await vault.threshold()).to.equal(2);
+            expect(await vault.delay()).to.equal(3600);
+            expect(await vault.isWhitelisted(addr1.address)).to.be.true;
+        });
+
+        // Test setTokenLimit function via queued transaction
+        it("should allow setting token limits via queued transaction", async function () {
+            // Queue transaction to set token limit
+            await vault.connect(owner).queueTransaction(
+                vault.target,
+                vault.interface.encodeFunctionData("setTokenLimit", [
+                    token.target,
+                    ethers.parseUnits("50"), // fixedLimit
+                    0,                       // percentageLimit
+                    0                        // useBaseLimit
+                ]),
+                0
+            );
+
+            // Confirm transaction
+            await vault.connect(owner).confirmTransaction(0);
+
+            const limit = await vault.tokenLimits(token.target);
+            expect(limit.fixedLimit).to.equal(ethers.parseUnits("50"));
+        });
+
+        // Test onERC721Received function
+        it("should accept NFTs via onERC721Received", async function () {
+            await nft.connect(owner).mint(owner.address, 2);
+            await nft.connect(owner)["safeTransferFrom(address,address,uint256,bytes)"](owner.address, vault.target, 2, "0x");
+
+            expect(await nft.ownerOf(2)).to.equal(vault.target);
+        });
+
+        // Test executeWithdrawal function indirectly via withdrawToken
+        it("should execute withdrawal and emit events", async function () {
+            // Deposit tokens
+            await token.connect(owner).approve(vault.target, ethers.parseUnits("100"));
+            await vault.connect(owner).depositToken(token.target, ethers.parseUnits("100"));
+
+            // Withdraw tokens within limit
+            await expect(
+                vault.connect(owner).withdrawToken(addr1.address, token.target, ethers.parseUnits("10"))
+            ).to.emit(vault, "TokenWithdrawn")
+             .and.to.emit(vault, "TransactionQueued")
+             .and.to.emit(vault, "TransactionExecuted");
+        });
+
+        // Test getLimitAmount function with various token limits
+        it("should return correct limit amount based on token settings", async function () {
+            // Deposit tokens
+            await token.connect(owner).approve(vault.target, ethers.parseUnits("200"));
+            await vault.connect(owner).depositToken(token.target, ethers.parseUnits("200"));
+
+            // Set fixed limit
+            await vault.connect(owner).queueTransaction(
+                vault.target,
+                vault.interface.encodeFunctionData("setTokenLimit", [
+                    token.target,
+                    ethers.parseUnits("50"), // fixedLimit
+                    0,                       // percentageLimit
+                    0                        // useBaseLimit
+                ]),
+                0
+            );
+            await vault.connect(owner).confirmTransaction(0);
+
+            let limitAmount = await vault.getLimitAmount(token.target);
+            expect(limitAmount).to.equal(ethers.parseUnits("50"));
+
+            // Set percentage limit
+            await vault.connect(owner).queueTransaction(
+                vault.target,
+                vault.interface.encodeFunctionData("setTokenLimit", [
+                    token.target,
+                    0,    // fixedLimit
+                    25,   // percentageLimit
+                    0     // useBaseLimit
+                ]),
+                0
+            );
+            await vault.connect(owner).confirmTransaction(1);
+
+            limitAmount = await vault.getLimitAmount(token.target);
+            expect(limitAmount).to.equal(ethers.parseUnits("50")); // 25% of 200
+
+            // Set useBaseLimit to 1 (disallow withdrawals)
+            await vault.connect(owner).queueTransaction(
+                vault.target,
+                vault.interface.encodeFunctionData("setTokenLimit", [
+                    token.target,
+                    0,  // fixedLimit
+                    0,  // percentageLimit
+                    1   // useBaseLimit
+                ]),
+                0
+            );
+            await vault.connect(owner).confirmTransaction(2);
+
+            limitAmount = await vault.getLimitAmount(token.target);
+            expect(limitAmount).to.equal(0);
+        });
+
+        // Test receive function
+        it("should accept Ether via receive function", async function () {
+            await owner.sendTransaction({
+                to: vault.target,
+                value: ethers.parseEther("1.0")
+            });
+
+            const balance = await ethers.provider.getBalance(vault.target);
+            expect(balance).to.equal(ethers.parseEther("1.0"));
+        });
+
+        // Test fallback function reverts on unknown function calls
+        it("should revert on unknown function calls via fallback", async function () {
+            await expect(
+                owner.sendTransaction({
+                    to: vault.target,
+                    data: "0x12345678"
+                })
+            ).to.be.reverted;
+        });
+
+        // Test that only owner can call onlyOwner functions
+        it("should prevent non-owner from calling onlyOwner functions", async function () {
+            await expect(
+                vault.connect(addr1).withdrawToken(addr1.address, token.target, ethers.parseUnits("10"))
+            ).to.be.revertedWith("Not the owner");
+        });
+
+        // Test that only recovery address can call onlyRecoveryAddress functions
+        it("should prevent non-recovery address from calling onlyRecoveryAddress functions", async function () {
+            await expect(
+                vault.connect(addr1).recover(token.target, addr1.address, ethers.parseUnits("10"), "0x", 0)
+            ).to.be.revertedWith("Not the recovery address");
+        });
+
+        // Test that only whitelisted addresses can confirm transactions
+        it("should prevent non-whitelisted addresses from confirming transactions", async function () {
+            await vault.connect(owner).queueTransaction(
+                vault.target,
+                vault.interface.encodeFunctionData("updateDailyLimit", [15]),
+                0
+            );
+
+            await expect(
+                vault.connect(addr2).confirmTransaction(0)
+            ).to.be.revertedWith("Not authorized");
+        });
+
+        // Test that owner cannot decrease freeze level
+        it("should prevent owner from decreasing freeze level", async function () {
+            // Freeze level to 2
+            await vault.connect(owner).freezeLock(2);
+
+            // Attempt to decrease freeze level
+            await expect(
+                vault.connect(owner).freezeLock(1)
+            ).to.be.revertedWith("Cannot unfreeze");
+        });
+
+        // Test that non-existent transactions cannot be confirmed
+        it("should revert when confirming non-existent transaction", async function () {
+            await expect(
+                vault.connect(owner).confirmTransaction(999)
+            ).to.be.reverted;
+        });
+
+        // Test that transaction cannot be confirmed twice by the same address
+        it("should prevent confirming transaction twice by the same address", async function () {
+            // Queue transaction
+            await vault.connect(owner).queueTransaction(
+                vault.target,
+                vault.interface.encodeFunctionData("updateDailyLimit", [15]),
+                0
+            );
+
+            // Confirm transaction
+            await vault.connect(owner).confirmTransaction(0);
+
+            // Attempt to confirm again
+            await expect(
+                vault.connect(owner).confirmTransaction(0)
+            ).to.be.revertedWith("Transaction already executed");
+        });
+
+        // Test that queueWithdrawal queues transaction when amount exceeds limit
+        it("should queue withdrawal when amount exceeds limit", async function () {
+            await token.connect(owner).approve(vault.target, ethers.parseUnits("100"));
+            await vault.connect(owner).depositToken(token.target, ethers.parseUnits("100"));
+
+            await expect(
+                vault.connect(owner).withdrawToken(addr1.address, token.target, ethers.parseUnits("20"))
+            ).to.emit(vault, "TransactionQueued");
+        });
+
+        // Test that getLimitAmount returns max value when useBaseLimit is 2
+        it("should return max limit when useBaseLimit is 2", async function () {
+            // Set useBaseLimit to 2
+            await vault.connect(owner).queueTransaction(
+                vault.target,
+                vault.interface.encodeFunctionData("setTokenLimit", [
+                    token.target,
+                    0,       // fixedLimit
+                    0,       // percentageLimit
+                    2        // useBaseLimit
+                ]),
+                0
+            );
+            await vault.connect(owner).confirmTransaction(0);
+
+            const limitAmount = await vault.getLimitAmount(token.target);
+            expect(limitAmount.toString()).to.equal('1000000000000000000000000000000');
+        });
+
+        // Test that recovery address cannot be set to zero address
+        it("should prevent setting recovery address to zero via updateSettings", async function () {
+            // Queue transaction to update settings with zero address
+            await vault.connect(owner).queueTransaction(
+                vault.target,
+                vault.interface.encodeFunctionData("updateSettings", [
+                    ethers.ZeroAddress, // newRecoveryAddress
+                    [],                          // newWhitelistedAddresses
+                    0,                           // newDailyLimit
+                    0,                           // newThreshold
+                    0,                           // newDelay
+                    [],                          // tokens
+                    [],                          // fixedLimits
+                    [],                          // percentageLimits
+                    []                           // useBaseLimits
+                ]),
+                0
+            );
+
+            // Confirm transaction
+            await vault.connect(owner).confirmTransaction(0);
+
+            expect(await vault.recoveryAddress()).to.equal(recoveryAddress.address); // Should remain unchanged
+        });
+    // Test that queueTransaction reverts when freeze is active
+    it("should revert queueTransaction when freeze is active", async function () {
+        // Freeze the vault
+        await vault.connect(owner).freezeLock(1);
+
+        // Attempt to queue a transaction
+        await expect(
+        vault.connect(owner).queueTransaction(
+            vault.target,
+            vault.interface.encodeFunctionData("updateDailyLimit", [15]),
+            0
+        )
+        ).to.be.revertedWith("Freeze is active");
+    });
+    });
+
+        // Test that recovery address cannot be set to zero address
+        it("should prevent setting recovery address to zero via updateSettings", async function () {
+            // Queue transaction to update settings with zero address
+            await vault.connect(owner).queueTransaction(
+                vault.target,
+                vault.interface.encodeFunctionData("updateSettings", [
+                    ethers.ZeroAddress, // newRecoveryAddress
+                    [],                          // newWhitelistedAddresses
+                    0,                           // newDailyLimit
+                    0,                           // newThreshold
+                    0,                           // newDelay
+                    [],                          // tokens
+                    [],                          // fixedLimits
+                    [],                          // percentageLimits
+                    []                           // useBaseLimits
+                ]),
+                0
+            );
+
+            // Confirm transaction
+            await vault.connect(owner).confirmTransaction(0);
+
+            expect(await vault.recoveryAddress()).to.equal(recoveryAddress.address); // Should remain unchanged
+        });
+        // Test that queueTransaction reverts when freeze is active
+        it("should revert queueTransaction when freeze is active", async function () {
+            // Freeze the vault
+            await vault.connect(owner).freezeLock(1);
+
+            // Attempt to queue a transaction
+            await expect(
+            vault.connect(owner).queueTransaction(
+                vault.target,
+                vault.interface.encodeFunctionData("updateDailyLimit", [15]),
+                0
+            )
+            ).to.be.revertedWith("Freeze is active");
+        });
+        // Test that withdrawToken reverts when token address is zero
+        it("should withdrawETH when token address is zero", async function () {
+            // Deposit ETH
+            let balance = await ethers.provider.getBalance(addr1.address);
+            await vault.connect(owner).depositToken(ethers.ZeroAddress, ethers.parseUnits("100"),{value: ethers.parseUnits("100")});
+            await vault.connect(owner).withdrawToken(addr1.address, ethers.ZeroAddress, ethers.parseUnits("10"))
+expect(await ethers.provider.getBalance(addr1.address)).to.equal(balance+ethers.parseUnits("10"));
+        });
+
+        // Test that withdrawToken reverts when token address is zero
+        it("shouldnt withdrawETH", async function () {
+            // Deposit ETH
+            let balance = await ethers.provider.getBalance(addr1.address);
+            await vault.connect(owner).depositToken(ethers.ZeroAddress, ethers.parseUnits("100"),{value: ethers.parseUnits("100")});
+            await expect( vault.connect(owner).withdrawToken(addr1.address, ethers.ZeroAddress, ethers.parseUnits("1000"))).to.be.reverted;
+        });
+        
+        it("should return correct vaults for owner", async function () {
+        // Create two vaults for owner
+        await vaultFactory.createVault(
+            "Vault1",
+            recoveryAddress.address,
+            [addr1.address],
+            dailyLimitPercentage,
+            1,
+            0
+        );
+        await vaultFactory.createVault(
+            "Vault2",
+            recoveryAddress.address,
+            [addr1.address],
+            dailyLimitPercentage,
+            1,
+            0
+        );
+
+        // Get vaults by owner
+        const vaults = await vaultFactory.getVaultsByOwner(owner.address);
+        expect(vaults.length).to.equal(2);
+    });
     });
 
