@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for contracts/Spot.sol</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../prettify.css" />
+    <link rel="stylesheet" href="../base.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class='wrapper'>
+  <div class='pad1'>
+    <h1>
+      <a href="../index.html">all files</a> / <a href="index.html">contracts/</a> Spot.sol
+    </h1>
+    <div class='clearfix'>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">0% </span>
+        <span class="quiet">Statements</span>
+        <span class='fraction'>0/37</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">0% </span>
+        <span class="quiet">Branches</span>
+        <span class='fraction'>0/34</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">0% </span>
+        <span class="quiet">Functions</span>
+        <span class='fraction'>0/9</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">0% </span>
+        <span class="quiet">Lines</span>
+        <span class='fraction'>0/60</span>
+      </div>
+    </div>
+  </div>
+  <div class='status-line low'></div>
+<pre><table class="coverage">
+<tr><td class="line-count quiet">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// SPDX-License-Identifier: MIT
+pragma solidity 0.8.24;
+&nbsp;
+import { SafeERC20, IERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+&nbsp;
+contract Spot{
+    using SafeERC20 for IERC20;
+&nbsp;
+    struct BorrowDetails {
+        address lender;
+        address friend;
+        address token;
+        uint256 totalBorrowed;
+        uint256 outstanding;
+        uint256 allowable;
+    }
+&nbsp;
+    mapping(bytes32 =&gt; BorrowDetails) public borrowDetails;
+    mapping(address =&gt; bytes32[]) public borrowDetailsByLender;
+    mapping(address =&gt; bytes32[]) public borrowDetailsByFriend;
+    address payable public feeAddress;
+    uint256 public fee;
+&nbsp;
+    event BorrowAllowed(
+        address indexed lender,
+        address indexed token,
+        address indexed friend,
+        uint256 amount
+    );
+    event Borrowed(
+        address indexed token,
+        address indexed lender,
+        address indexed borrower,
+        uint256 amount
+    );
+    event Repaid(
+        address indexed token,
+        address indexed lender,
+        address indexed borrower,
+        uint256 amount
+    );
+&nbsp;
+    event NewFeeAddress(address indexed oldFeeAddress, address indexed newFeeAddress);
+    event NewFee(uint256 oldFee, uint256 newFee);
+&nbsp;
+    error TokenNotZero();
+    error FriendZero();
+    error LenderZero();
+    error NotEnoughAllowableAmount();
+    error NotFriend();
+    error NotFeeAddress();
+    error AmountIsZero();
+    error FeeAddressIsZero();
+&nbsp;
+<span class="fstat-no" title="function not covered" >    constructor(address payable feeAddrs) {</span>
+        feeAddress = feeAddrs;
+    }
+&nbsp;
+<span class="fstat-no" title="function not covered" >    function computeHash(</span>
+        address lender,
+        address token,
+        address friend
+    ) public pure returns (bytes32) {
+<span class="cstat-no" title="statement not covered" >        return keccak256(abi.encodePacked(lender, token, friend));</span>
+    }
+&nbsp;
+<span class="fstat-no" title="function not covered" >    function allowBorrow(</span>
+        address token,
+        address friend,
+        uint256 amount
+    ) external {
+<span class="cstat-no" title="statement not covered" >        if (token == address(0)) {</span>
+            revert TokenNotZero();
+        }
+<span class="cstat-no" title="statement not covered" >        if (friend == address(0)) {</span>
+            revert FriendZero();
+        }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        bytes32 hash = computeHash(msg.sender, token, friend);</span>
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        if (borrowDetails[hash].lender == address(0)) {</span>
+            borrowDetails[hash] = BorrowDetails({
+                lender: msg.sender,
+                friend: friend,
+                token: token,
+                totalBorrowed: 0,
+                outstanding: 0,
+                allowable: amount
+            });
+&nbsp;
+<span class="cstat-no" title="statement not covered" >            borrowDetailsByLender[msg.sender].push(hash)</span>;
+<span class="cstat-no" title="statement not covered" >            borrowDetailsByFriend[friend].push(hash)</span>;
+        } else {
+            borrowDetails[hash].allowable = amount;
+        }
+<span class="cstat-no" title="statement not covered" >        emit BorrowAllowed(msg.sender, token, friend, amount);</span>
+    }
+&nbsp;
+<span class="fstat-no" title="function not covered" >    function borrow(address token, address lender, uint256 amount) external{</span>
+<span class="cstat-no" title="statement not covered" >        if (token == address(0)) {</span>
+            revert TokenNotZero();
+        }
+<span class="cstat-no" title="statement not covered" >        if (lender == address(0)) {</span>
+            revert LenderZero();
+        }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        bytes32 hash = computeHash(lender, token, msg.sender);</span>
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        if (borrowDetails[hash].allowable - borrowDetails[hash].outstanding &lt; amount) {</span>
+            revert NotEnoughAllowableAmount();
+        }
+<span class="cstat-no" title="statement not covered" >        if (borrowDetails[hash].friend != msg.sender) {</span>
+            revert NotFriend();
+        }
+&nbsp;
+        borrowDetails[hash].totalBorrowed += amount;
+        borrowDetails[hash].outstanding += amount;
+<span class="cstat-no" title="statement not covered" >        IERC20(token).safeTransferFrom(lender, msg.sender, amount)</span>;
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        emit Borrowed(token, lender, msg.sender, amount);</span>
+    }
+&nbsp;
+<span class="fstat-no" title="function not covered" >    function repay(address token, address lender, uint256 amount) external{</span>
+<span class="cstat-no" title="statement not covered" >        if (token == address(0)) {</span>
+            revert TokenNotZero();
+        }
+<span class="cstat-no" title="statement not covered" >        if (lender == address(0)) {</span>
+            revert LenderZero();
+        }
+<span class="cstat-no" title="statement not covered" >        if (amount == 0) {</span>
+            revert AmountIsZero();
+        }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        bytes32 hash = computeHash(lender, token, msg.sender);</span>
+<span class="cstat-no" title="statement not covered" >        if (fee == 0) {</span>
+<span class="cstat-no" title="statement not covered" >            if (borrowDetails[hash].outstanding &lt;= amount) {</span>
+                amount = borrowDetails[hash].outstanding;
+            }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >            IERC20(token).safeTransferFrom(msg.sender, lender, amount)</span>;
+            borrowDetails[hash].outstanding -= amount;
+        } else {
+<span class="cstat-no" title="statement not covered" >            if (</span>
+                borrowDetails[hash].outstanding +
+                (borrowDetails[hash].outstanding * fee) /
+                1000 &lt;=
+                amount
+            ) {
+<span class="cstat-no" title="statement not covered" >                IERC20(token).safeTransferFrom(</span>
+                    msg.sender,
+                    lender,
+                    borrowDetails[hash].outstanding
+                );
+&nbsp;
+<span class="cstat-no" title="statement not covered" >                IERC20(token).safeTransferFrom(</span>
+                    msg.sender,
+                    feeAddress,
+                    (borrowDetails[hash].outstanding * fee) / 1000
+                );
+                borrowDetails[hash].outstanding -= borrowDetails[hash]
+                    .outstanding;
+            } else {
+<span class="cstat-no" title="statement not covered" >                IERC20(token).safeTransferFrom(</span>
+                    msg.sender,
+                    lender,
+                    amount - (amount * fee) / 1000
+                );
+<span class="cstat-no" title="statement not covered" >                IERC20(token).safeTransferFrom(</span>
+                    msg.sender,
+                    feeAddress,
+                    (amount * fee) / 1000
+                );
+                borrowDetails[hash].outstanding -=
+                    amount -
+                    (amount * fee) /
+                    1000;
+            }
+        }
+<span class="cstat-no" title="statement not covered" >        emit Repaid(token, lender, msg.sender, amount);</span>
+    }
+&nbsp;
+<span class="fstat-no" title="function not covered" >    function viewLenderAllowances(</span>
+        address lender
+    ) public view returns (bytes32[] memory) {
+<span class="cstat-no" title="statement not covered" >        return borrowDetailsByLender[lender];</span>
+    }
+&nbsp;
+<span class="fstat-no" title="function not covered" >    function viewFriendAllowances(</span>
+        address friend
+    ) public view returns (bytes32[] memory) {
+<span class="cstat-no" title="statement not covered" >        return borrowDetailsByFriend[friend];</span>
+    }
+&nbsp;
+<span class="fstat-no" title="function not covered" >    function setFee(uint newFee) public {</span>
+<span class="cstat-no" title="statement not covered" >        if (msg.sender != feeAddress) {</span>
+            revert NotFeeAddress();
+        }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        uint256 oldFee = fee;</span>
+        fee = newFee &lt;= 50 ? newFee : 50;
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        emit NewFee(oldFee, newFee);</span>
+    }
+&nbsp;
+<span class="fstat-no" title="function not covered" >    function setFeeAddress(address newFeeAddress) public {</span>
+<span class="cstat-no" title="statement not covered" >        if (msg.sender != feeAddress) {</span>
+            revert NotFeeAddress();
+        }
+<span class="cstat-no" title="statement not covered" >        if (newFeeAddress == address(0)) {</span>
+            revert FeeAddressIsZero();
+        }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        address oldFeeAddress = feeAddress;</span>
+        feeAddress = payable(newFeeAddress);
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        emit NewFeeAddress(oldFeeAddress, newFeeAddress);</span>
+    }
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+<div class='push'></div><!-- for sticky footer -->
+</div><!-- /wrapper -->
+<div class='footer quiet pad2 space-top1 center small'>
+  Code coverage
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Wed Oct 30 2024 10:25:41 GMT+0000 (Coordinated Universal Time)
+</div>
+</div>
+<script src="../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../sorter.js"></script>
+</body>
+</html>

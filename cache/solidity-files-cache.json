@@ -2,7 +2,7 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/workspaces/Spot/contracts/Spot.sol": {
-      "lastModificationDate": 1730195311088,
+      "lastModificationDate": 1730279717428,
       "contentHash": "d505253730f43816032119aabf902b68",
       "sourceName": "contracts/Spot.sol",
       "solcConfig": {
@@ -26,6 +26,9 @@
                 "ast"
               ]
             }
+          },
+          "metadata": {
+            "useLiteralContent": false
           }
         }
       },
@@ -40,7 +43,7 @@
       ]
     },
     "/workspaces/Spot/node_modules/@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol": {
-      "lastModificationDate": 1730195856728,
+      "lastModificationDate": 1730279723796,
       "contentHash": "76814c83c32552ed2b521c816b4d801a",
       "sourceName": "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol",
       "solcConfig": {
@@ -64,6 +67,9 @@
                 "ast"
               ]
             }
+          },
+          "metadata": {
+            "useLiteralContent": false
           }
         }
       },
@@ -79,7 +85,7 @@
       ]
     },
     "/workspaces/Spot/node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol": {
-      "lastModificationDate": 1730195856660,
+      "lastModificationDate": 1730279723780,
       "contentHash": "ad7c2d0af148c8f9f097d65deeb4da6b",
       "sourceName": "@openzeppelin/contracts/token/ERC20/IERC20.sol",
       "solcConfig": {
@@ -103,6 +109,9 @@
                 "ast"
               ]
             }
+          },
+          "metadata": {
+            "useLiteralContent": false
           }
         }
       },
@@ -115,7 +124,7 @@
       ]
     },
     "/workspaces/Spot/node_modules/@openzeppelin/contracts/utils/Address.sol": {
-      "lastModificationDate": 1730195856660,
+      "lastModificationDate": 1730279723744,
       "contentHash": "ad714a6368ee7d43cded6bbe8af0b155",
       "sourceName": "@openzeppelin/contracts/utils/Address.sol",
       "solcConfig": {
@@ -139,6 +148,9 @@
                 "ast"
               ]
             }
+          },
+          "metadata": {
+            "useLiteralContent": false
           }
         }
       },
@@ -151,7 +163,7 @@
       ]
     },
     "/workspaces/Spot/node_modules/@openzeppelin/contracts/token/ERC721/ERC721.sol": {
-      "lastModificationDate": 1730195856660,
+      "lastModificationDate": 1730279723780,
       "contentHash": "21b9f3bdb3e60f56ea81361c37420136",
       "sourceName": "@openzeppelin/contracts/token/ERC721/ERC721.sol",
       "solcConfig": {
@@ -175,6 +187,9 @@
                 "ast"
               ]
             }
+          },
+          "metadata": {
+            "useLiteralContent": false
           }
         }
       },
@@ -195,7 +210,7 @@
       ]
     },
     "/workspaces/Spot/node_modules/@openzeppelin/contracts/token/ERC721/IERC721.sol": {
-      "lastModificationDate": 1730195856660,
+      "lastModificationDate": 1730279723780,
       "contentHash": "cd8e72e5859bddd5fd26b2fb5c51c846",
       "sourceName": "@openzeppelin/contracts/token/ERC721/IERC721.sol",
       "solcConfig": {
@@ -219,6 +234,9 @@
                 "ast"
               ]
             }
+          },
+          "metadata": {
+            "useLiteralContent": false
           }
         }
       },
@@ -233,7 +251,7 @@
       ]
     },
     "/workspaces/Spot/node_modules/@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol": {
-      "lastModificationDate": 1730195856660,
+      "lastModificationDate": 1730279723780,
       "contentHash": "c22d4395e33763de693fd440c6fd10e1",
       "sourceName": "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol",
       "solcConfig": {
@@ -257,6 +275,9 @@
                 "ast"
               ]
             }
+          },
+          "metadata": {
+            "useLiteralContent": false
           }
         }
       },
@@ -269,7 +290,7 @@
       ]
     },
     "/workspaces/Spot/node_modules/@openzeppelin/contracts/utils/Context.sol": {
-      "lastModificationDate": 1730195856660,
+      "lastModificationDate": 1730279723744,
       "contentHash": "5f2c5c4b6af2dd4551027144797bc8be",
       "sourceName": "@openzeppelin/contracts/utils/Context.sol",
       "solcConfig": {
@@ -293,6 +314,9 @@
                 "ast"
               ]
             }
+          },
+          "metadata": {
+            "useLiteralContent": false
           }
         }
       },
@@ -305,7 +329,7 @@
       ]
     },
     "/workspaces/Spot/node_modules/@openzeppelin/contracts/utils/Strings.sol": {
-      "lastModificationDate": 1730195856660,
+      "lastModificationDate": 1730279723744,
       "contentHash": "9c54c6c065d9e590fdcdd72c451425b9",
       "sourceName": "@openzeppelin/contracts/utils/Strings.sol",
       "solcConfig": {
@@ -329,6 +353,9 @@
                 "ast"
               ]
             }
+          },
+          "metadata": {
+            "useLiteralContent": false
           }
         }
       },
@@ -341,7 +368,7 @@
       ]
     },
     "/workspaces/Spot/node_modules/@openzeppelin/contracts/utils/introspection/ERC165.sol": {
-      "lastModificationDate": 1730195856728,
+      "lastModificationDate": 1730279723780,
       "contentHash": "0e7db055ce108f9da7bb6686a00287c0",
       "sourceName": "@openzeppelin/contracts/utils/introspection/ERC165.sol",
       "solcConfig": {
@@ -365,6 +392,9 @@
                 "ast"
               ]
             }
+          },
+          "metadata": {
+            "useLiteralContent": false
           }
         }
       },
@@ -379,7 +409,7 @@
       ]
     },
     "/workspaces/Spot/node_modules/@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol": {
-      "lastModificationDate": 1730195856728,
+      "lastModificationDate": 1730279723796,
       "contentHash": "efbc0d15b80a74e34dbe8da0f3e879bb",
       "sourceName": "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol",
       "solcConfig": {
@@ -403,6 +433,9 @@
                 "ast"
               ]
             }
+          },
+          "metadata": {
+            "useLiteralContent": false
           }
         }
       },
@@ -417,7 +450,7 @@
       ]
     },
     "/workspaces/Spot/node_modules/@openzeppelin/contracts/utils/introspection/IERC165.sol": {
-      "lastModificationDate": 1730195856728,
+      "lastModificationDate": 1730279723780,
       "contentHash": "03e6768535ac4da0e9756f1d8a4a018a",
       "sourceName": "@openzeppelin/contracts/utils/introspection/IERC165.sol",
       "solcConfig": {
@@ -441,6 +474,9 @@
                 "ast"
               ]
             }
+          },
+          "metadata": {
+            "useLiteralContent": false
           }
         }
       },
@@ -453,7 +489,7 @@
       ]
     },
     "/workspaces/Spot/contracts/Vault.sol": {
-      "lastModificationDate": 1730195026388,
+      "lastModificationDate": 1730278783945,
       "contentHash": "1f5b54043bc62e3332efcca00e62abe3",
       "sourceName": "contracts/Vault.sol",
       "solcConfig": {
@@ -477,6 +513,9 @@
                 "ast"
               ]
             }
+          },
+          "metadata": {
+            "useLiteralContent": false
           }
         }
       },
@@ -495,7 +534,7 @@
       ]
     },
     "/workspaces/Spot/node_modules/@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol": {
-      "lastModificationDate": 1730195856728,
+      "lastModificationDate": 1730279723796,
       "contentHash": "909ab67fc5c25033fe6cd364f8c056f9",
       "sourceName": "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol",
       "solcConfig": {
@@ -519,6 +558,9 @@
                 "ast"
               ]
             }
+          },
+          "metadata": {
+            "useLiteralContent": false
           }
         }
       },
@@ -533,7 +575,7 @@
       ]
     },
     "/workspaces/Spot/node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol": {
-      "lastModificationDate": 1730195856660,
+      "lastModificationDate": 1730279723780,
       "contentHash": "a9d2146925da52142435d3bb8df53c3c",
       "sourceName": "@openzeppelin/contracts/token/ERC20/ERC20.sol",
       "solcConfig": {
@@ -557,6 +599,9 @@
                 "ast"
               ]
             }
+          },
+          "metadata": {
+            "useLiteralContent": false
           }
         }
       },
@@ -573,7 +618,7 @@
       ]
     },
     "/workspaces/Spot/contracts/mock/ERC20Mock.sol": {
-      "lastModificationDate": 1730195026388,
+      "lastModificationDate": 1730279717428,
       "contentHash": "eda1b67eacaec3aa376fae1b44a1576a",
       "sourceName": "contracts/mock/ERC20Mock.sol",
       "solcConfig": {
@@ -597,6 +642,9 @@
                 "ast"
               ]
             }
+          },
+          "metadata": {
+            "useLiteralContent": false
           }
         }
       },
@@ -611,8 +659,8 @@
       ]
     },
     "/workspaces/Spot/contracts/mock/ERC721Mock.sol": {
-      "lastModificationDate": 1730195026388,
-      "contentHash": "e80859d4025fb68b6c70e71ac7ca5229",
+      "lastModificationDate": 1730283353368,
+      "contentHash": "e3b37a7eea7da84827b713f2883af37e",
       "sourceName": "contracts/mock/ERC721Mock.sol",
       "solcConfig": {
         "version": "0.8.24",
@@ -635,6 +683,9 @@
                 "ast"
               ]
             }
+          },
+          "metadata": {
+            "useLiteralContent": false
           }
         }
       },
@@ -649,7 +700,7 @@
       ]
     },
     "/workspaces/Spot/contracts/Stream.sol": {
-      "lastModificationDate": 1730195558476,
+      "lastModificationDate": 1730279717428,
       "contentHash": "8061ed8c0abefc6db9f3251a43a08da1",
       "sourceName": "contracts/Stream.sol",
       "solcConfig": {
@@ -673,6 +724,9 @@
                 "ast"
               ]
             }
+          },
+          "metadata": {
+            "useLiteralContent": false
           }
         }
       },
