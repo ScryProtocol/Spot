@@ -1361,7 +1361,15 @@ expect(await ethers.provider.getBalance(addr1.address)).to.equal(balance+ethers.
             await vault.connect(owner).depositToken(ethers.ZeroAddress, ethers.parseUnits("100"),{value: ethers.parseUnits("100")});
             await expect( vault.connect(owner).withdrawToken(addr1.address, ethers.ZeroAddress, ethers.parseUnits("1000"))).to.be.reverted;
         });
-        
+        // Test that withdrawToken reverts when token address is zero
+        it("shouldnt withdrawETH", async function () {
+            // Deposit ETH
+            let balance = await ethers.provider.getBalance(addr1.address);
+            await vault.connect(owner).depositToken(ethers.ZeroAddress, ethers.parseUnits("100"),{value: ethers.parseUnits("100")});
+            await vault.connect(owner).withdrawToken(addr1.address, ethers.ZeroAddress, ethers.parseUnits("100"))
+        await vault.connect(owner).confirmTransaction(0);
+        expect(await ethers.provider.getBalance(addr1.address)).to.equal(balance+ethers.parseUnits("100"));
+        })
         it("should return correct vaults for owner", async function () {
         // Create two vaults for owner
         await vaultFactory.createVault(
@@ -1384,6 +1392,19 @@ expect(await ethers.provider.getBalance(addr1.address)).to.equal(balance+ethers.
         // Get vaults by owner
         const vaults = await vaultFactory.getVaultsByOwner(owner.address);
         expect(vaults.length).to.equal(2);
+    });
+    // 18. Testing 'getLimit' function when amount exceeds remaining limit
+    it("should return remaining limit when amount exceeds remaining limit", async function () {
+        // Deposit tokens into the vault
+        await token.connect(owner).approve(vault.target, ethers.parseUnits("100"));
+        await vault.connect(owner).depositToken(token.target, ethers.parseUnits("100"));
+
+        // Withdraw some tokens to reduce the remaining limit
+        await vault.connect(owner).withdrawToken(addr1.address, token.target, ethers.parseUnits("10"));
+
+        // Call getLimit function with an amount exceeding the remaining limit
+        const limitAmount = await vault.getLimit(addr1.address, token.target, ethers.parseUnits("20"));
+        expect(limitAmount).to.equal(ethers.parseUnits("0")); // Remaining limit should be 20
     });
     });
 
