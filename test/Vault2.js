@@ -1406,5 +1406,14 @@ expect(await ethers.provider.getBalance(addr1.address)).to.equal(balance+ethers.
         const limitAmount = await vault.getLimit(addr1.address, token.target, ethers.parseUnits("20"));
         expect(limitAmount).to.equal(ethers.parseUnits("0")); // Remaining limit should be 20
     });
+    // 19. Testing depositToken function when "Transfer failed" "Incorrect ETH amount"
+    it("should revert when transfer failed", async function () {
+        // Deposit tokens into the vault
+        await token.connect(owner).approve(vault.target, ethers.parseUnits("10"));
+        await expect(vault.connect(owner).depositToken(token.target, ethers.parseUnits("100"))).to.be.reverted;
+
+await expect(vault.connect(owner).depositToken(ethers.ZeroAddress, ethers.parseUnits("10"),{value: ethers.parseUnits("100")})).to.be.reverted; 
+await  expect(vault.connect(owner).depositToken(ethers.ZeroAddress, ethers.parseUnits("100"),{value: ethers.parseUnits("10")})).to.be.reverted;
     });
+});
 
