@@ -858,7 +858,7 @@ await vault.connect(owner).confirmTransaction(2);
             expect(await vault.recoveryAddress()).to.equal(addr2.address);
         });
     
-        // Add more tests as needed to cover all functionalities...
     });
+    
     });
 
