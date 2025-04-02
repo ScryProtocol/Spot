@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
-contract Vault2 is IERC721Receiver {
+contract Vault is IERC721Receiver {
     struct Transaction {
         address to;
         bytes data;
@@ -603,7 +603,7 @@ contract VaultFactory2 {
 
         SimpleProxy proxyc = new SimpleProxy{salt: salt}(vaultImplementation);
         address proxy = address(proxyc);
-        Vault2(payable(proxy)).init(
+        Vault(payable(proxy)).init(
             msg.sender,
             _name,
             _recoveryAddress,
