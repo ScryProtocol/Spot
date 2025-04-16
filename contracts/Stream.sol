@@ -374,12 +374,12 @@ contract Stream {
     ) public view returns (uint256) {
         bytes32 hash = computeHash(streamer, token, recipient);
         StreamDetails storage details = streamDetails[hash];
-        require(details.streamer != address(0), "Stream does not exist");
+        //require(details.streamer != address(0), "Stream does not exist");
 
         uint256 currentTime = block.timestamp;
         uint256 elapsedTime = currentTime - details.timestamp;
-        uint256 allowableAmount = (details.allowable * elapsedTime) /
-            details.window;
+        uint256 allowableAmount = details.window>0?(details.allowable * elapsedTime) /
+            details.window:0;
 
         if (allowableAmount > details.outstanding && details.once == true) {
             allowableAmount = details.outstanding;
@@ -417,12 +417,19 @@ contract Stream {
             );
 
             // Getting the ERC20 token details
-            IERC20 token = IERC20(details[i].token);
-            decimals[i] = token.decimals();
-            tokenNames[i] = token.name();
-            tokenSymbols[i] = token.symbol();
+(bool success, bytes memory data) = details[i].token.staticcall(
+                abi.encodeWithSignature("decimals()")
+            );
+            decimals[i] = data.length==32 ? abi.decode(data, (uint8)) : 0;
+            (success, data) = details[i].token.staticcall(
+                abi.encodeWithSignature("name()")
+            );
+            tokenNames[i] = data.length>0 ? abi.decode(data, (string)) : "";
+            (success, data) = details[i].token.staticcall(
+                abi.encodeWithSignature("symbol()")
+            );
+            tokenSymbols[i] = data.length>0 ? abi.decode(data, (string)) : "";
         }
-
         return (availableAmounts, decimals, tokenNames, tokenSymbols, details);
     }
     function getStreamable(
@@ -479,7 +486,30 @@ contract Stream {
     ) public view returns (bytes32[] memory) {
         return streamDetailsByRecipient[recipient];
     }
-
+function viewStreamerAllowancesCount(
+        address streamer
+    ) public view returns (uint) {
+        return streamDetailsByStreamer[streamer].length;
+    }
+function viewRecipientAllowancesCount(
+        address recipient
+    ) public view returns (uint) {
+        return streamDetailsByRecipient[recipient].length;
+    }
+    function viewStreamerAllowances(address streamer, uint[] calldata indexes) public view returns (bytes32[] memory) {
+        bytes32[] memory allowances = new bytes32[](indexes.length);
+        for (uint i = 0; i < indexes.length; i++) {
+            allowances[i] = streamDetailsByStreamer[streamer][indexes[i]];
+        }
+        return allowances;
+    }
+    function viewRecipientAllowances(address recipient, uint[] calldata indexes) public view returns (bytes32[] memory) {
+        bytes32[] memory allowances = new bytes32[](indexes.length);
+        for (uint i = 0; i < indexes.length; i++) {
+            allowances[i] = streamDetailsByRecipient[recipient][indexes[i]];
+        }
+        return allowances;
+    }
     function setFee(uint _fee, address newFeeAddress) public {
         require(msg.sender == feeAddress, "You are not the owner");
         fee = _fee <= 50 ? _fee : 50;
