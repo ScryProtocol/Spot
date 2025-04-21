@@ -37,6 +37,7 @@ interface ISpotIOULoan {
     function redeemIOUs(uint256 iouAmount) external;
     function drop(uint256 iouAmount) external;
     function underlyingDecimals() external view returns (uint256);
+    function fundLoan(uint256 amount) external;
 }
 
 interface IOUMint {
@@ -507,12 +508,14 @@ contract Gigastrat is ERC20 {
 
     uint256 lastDraw;
 
-    function drawDownAndBuyETH(uint256 loanIndex) external {
-        require(block.timestamp >= lastDraw + 2 minutes);
-        lastDraw = block.timestamp;
-        uint256 amount = ISpotIOULoan(loans[loanIndex].loanAddress).totalFunded() / 10;
-        amount=amount>ISpotIOULoan(loans[loanIndex].loanAddress)
-            .loanGoal() - ISpotIOULoan(loans[loanIndex].loanAddress).totalDrawnDown() ? ISpotIOULoan(loans[loanIndex].loanAddress).loanGoal() - ISpotIOULoan(loans[loanIndex].loanAddress).totalDrawnDown() : amount;
+    function fundLoan(uint256 loanIndex,uint amount) external {
+        IERC20(usdcToken).transferFrom(msg.sender, address(this), amount);
+        IERC20(usdcToken).approve(
+            loans[loanIndex].loanAddress,
+            amount
+        );
+        ISpotIOULoan(loans[loanIndex].loanAddress).fundLoan(amount);
+                IERC20(loans[loanIndex].loanAddress).transfer(msg.sender, amount);
         this.drawDownLoan(loanIndex, amount);
         this.buyETH(loanIndex, amount);
     }
@@ -690,15 +693,7 @@ amount=amount>ISpotIOULoan(loans[loanIndex].loanAddress)
                 emit ProfitFinalized(loanIndex, loans[loanIndex].profitETH);
             }
         } else if (repayRedeemorBuy == 1) {
-            
-uint amt= amount * loans[loanIndex].totalBuyETH / IERC20(loans[loanIndex].loanAddress).totalSupply();
-ISpotIOULoan(loans[loanIndex].loanAddress).drop(amount);
-            ISpotIOULoan(loans[loanIndex].loanAddress).drop(amount);
-
-            ethFromMint += msg.value;
-
-            emit RedeemedAndSwapped(amount, amount, msg.value);
-        } else if (repayRedeemorBuy == 2) {
+            } else if (repayRedeemorBuy == 2) {
             // Draw down from the loan
             require(
                 (uint256(getLatestPrice()) * 995 / 1000 * msg.value) /
