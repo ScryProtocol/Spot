@@ -29,15 +29,16 @@ interface ISpotIOULoan {
     function drawDown(uint256 amount) external;
     function totalOwed() external view returns (uint256);
     function repayLoan(uint256 amount) external;
-    function underlying() external view returns (address);
+    function loanToken() external view returns (address);
     function loanGoal() external view returns (uint256);
     function totalFunded() external view returns (uint256);
     function totalDrawnDown() external view returns (uint256);
     function annualInterestRate() external view returns (uint256);
     function redeemIOUs(uint256 iouAmount) external;
     function drop(uint256 iouAmount) external;
-    function underlyingDecimals() external view returns (uint256);
     function fundLoan(uint256 amount) external;
+    function updateGoal(uint256 newGoal) external;
+    function decimals() external view returns (uint8);
 }
 
 interface IOUMint {
@@ -67,13 +68,12 @@ interface ISwapRouter {
         address recipient;
         uint256 amountIn;
         uint256 amountOutMinimum;
-        uint160 sqrtPriceLimitX96; 
+        uint160 sqrtPriceLimitX96;
     }
 
-    function exactInputSingle(ExactInputSingleParams calldata params)
-        external
-        payable
-        returns (uint256 amountOut);
+    function exactInputSingle(
+        ExactInputSingleParams calldata params
+    ) external payable returns (uint256 amountOut);
 }
 
 /**
@@ -100,7 +100,11 @@ abstract contract ERC20 {
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
     event Transfer(address indexed from, address indexed to, uint256 amount);
-    event Approval(address indexed owner, address indexed spender, uint256 amount);
+    event Approval(
+        address indexed owner,
+        address indexed spender,
+        uint256 amount
+    );
 
     // keccak256("Transfer(address,address,uint256)")
     uint256 private constant _TRANSFER_EVENT_SIGNATURE =
@@ -138,7 +142,9 @@ abstract contract ERC20 {
         }
     }
 
-    function balanceOf(address owner) public view virtual returns (uint256 result) {
+    function balanceOf(
+        address owner
+    ) public view virtual returns (uint256 result) {
         assembly {
             mstore(0x0c, _BALANCE_SLOT_SEED)
             mstore(0x00, owner)
@@ -146,7 +152,10 @@ abstract contract ERC20 {
         }
     }
 
-    function allowance(address owner, address spender) public view virtual returns (uint256 result) {
+    function allowance(
+        address owner,
+        address spender
+    ) public view virtual returns (uint256 result) {
         assembly {
             mstore(0x20, spender)
             mstore(0x0c, _ALLOWANCE_SLOT_SEED)
@@ -155,7 +164,10 @@ abstract contract ERC20 {
         }
     }
 
-    function approve(address spender, uint256 amount) public virtual returns (bool) {
+    function approve(
+        address spender,
+        uint256 amount
+    ) public virtual returns (bool) {
         assembly {
             mstore(0x20, spender)
             mstore(0x0c, _ALLOWANCE_SLOT_SEED)
@@ -163,12 +175,21 @@ abstract contract ERC20 {
             sstore(keccak256(0x0c, 0x34), amount)
 
             mstore(0x00, amount)
-            log3(0x00, 0x20, _APPROVAL_EVENT_SIGNATURE, caller(), shr(96, mload(0x2c)))
+            log3(
+                0x00,
+                0x20,
+                _APPROVAL_EVENT_SIGNATURE,
+                caller(),
+                shr(96, mload(0x2c))
+            )
         }
         return true;
     }
 
-    function transfer(address to, uint256 amount) public virtual returns (bool) {
+    function transfer(
+        address to,
+        uint256 amount
+    ) public virtual returns (bool) {
         assembly {
             mstore(0x0c, _BALANCE_SLOT_SEED)
             mstore(0x00, caller())
@@ -185,12 +206,22 @@ abstract contract ERC20 {
             sstore(toBalanceSlot, add(sload(toBalanceSlot), amount))
 
             mstore(0x20, amount)
-            log3(0x20, 0x20, _TRANSFER_EVENT_SIGNATURE, caller(), shr(96, mload(0x0c)))
+            log3(
+                0x20,
+                0x20,
+                _TRANSFER_EVENT_SIGNATURE,
+                caller(),
+                shr(96, mload(0x0c))
+            )
         }
         return true;
     }
 
-    function transferFrom(address from, address to, uint256 amount) public virtual returns (bool) {
+    function transferFrom(
+        address from,
+        address to,
+        uint256 amount
+    ) public virtual returns (bool) {
         assembly {
             let from_ := shl(96, from)
             mstore(0x20, caller())
@@ -220,7 +251,13 @@ abstract contract ERC20 {
             sstore(toBalanceSlot, add(sload(toBalanceSlot), amount))
 
             mstore(0x20, amount)
-            log3(0x20, 0x20, _TRANSFER_EVENT_SIGNATURE, shr(96, from_), shr(96, mload(0x0c)))
+            log3(
+                0x20,
+                0x20,
+                _TRANSFER_EVENT_SIGNATURE,
+                shr(96, from_),
+                shr(96, mload(0x0c))
+            )
         }
         return true;
     }
@@ -261,12 +298,22 @@ abstract contract ERC20 {
             sstore(_TOTAL_SUPPLY_SLOT, sub(sload(_TOTAL_SUPPLY_SLOT), amount))
 
             mstore(0x00, amount)
-            log3(0x00, 0x20, _TRANSFER_EVENT_SIGNATURE, shr(96, shl(96, from)), 0)
+            log3(
+                0x00,
+                0x20,
+                _TRANSFER_EVENT_SIGNATURE,
+                shr(96, shl(96, from)),
+                0
+            )
         }
     }
 
     /* INTERNAL TRANSFER FUNCTIONS */
-    function _transfer(address from, address to, uint256 amount) internal virtual {
+    function _transfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal virtual {
         assembly {
             let from_ := shl(96, from)
             mstore(0x0c, or(from_, _BALANCE_SLOT_SEED))
@@ -283,12 +330,22 @@ abstract contract ERC20 {
             sstore(toBalanceSlot, add(sload(toBalanceSlot), amount))
 
             mstore(0x20, amount)
-            log3(0x20, 0x20, _TRANSFER_EVENT_SIGNATURE, shr(96, from_), shr(96, mload(0x0c)))
+            log3(
+                0x20,
+                0x20,
+                _TRANSFER_EVENT_SIGNATURE,
+                shr(96, from_),
+                shr(96, mload(0x0c))
+            )
         }
     }
 
     /* INTERNAL ALLOWANCE FUNCTIONS */
-    function _spendAllowance(address owner, address spender, uint256 amount) internal virtual {
+    function _spendAllowance(
+        address owner,
+        address spender,
+        uint256 amount
+    ) internal virtual {
         assembly {
             mstore(0x20, spender)
             mstore(0x0c, _ALLOWANCE_SLOT_SEED)
@@ -305,14 +362,24 @@ abstract contract ERC20 {
         }
     }
 
-    function _approve(address owner, address spender, uint256 amount) internal virtual {
+    function _approve(
+        address owner,
+        address spender,
+        uint256 amount
+    ) internal virtual {
         assembly {
             let owner_ := shl(96, owner)
             mstore(0x20, spender)
             mstore(0x0c, or(owner_, _ALLOWANCE_SLOT_SEED))
             sstore(keccak256(0x0c, 0x34), amount)
             mstore(0x00, amount)
-            log3(0x00, 0x20, _APPROVAL_EVENT_SIGNATURE, shr(96, owner_), shr(96, mload(0x2c)))
+            log3(
+                0x00,
+                0x20,
+                _APPROVAL_EVENT_SIGNATURE,
+                shr(96, owner_),
+                shr(96, mload(0x2c))
+            )
         }
     }
 }
@@ -322,12 +389,12 @@ contract Gigastrat is ERC20 {
     //  Structs / Storage
     // =========================
     struct LoanInfo {
-        address loanAddress;    
-        uint256 loanGoal;       
+        address loanAddress;
+        uint256 loanGoal;
         uint256 totalDrawnDown;
-        bool loanDrawn;         
-        uint256 loanDrawnTime;  
-        bool fullyRepaid;       
+        bool loanDrawn;
+        uint256 loanDrawnTime;
+        bool fullyRepaid;
         uint256 iouConversionRate;
         uint256 totalBuyETH;
         uint256 soldETH;
@@ -344,9 +411,9 @@ contract Gigastrat is ERC20 {
 
     uint256 public ethFromMint;
 
-    uint256 public constant SLIPPAGE = 1e16;  
+    uint256 public constant SLIPPAGE = 1e16;
     uint256 public constant NO_DEADLINE = type(uint256).max;
-    uint24  public constant POOL_FEE = 500;  
+    uint24 public constant POOL_FEE = 500;
 
     mapping(address => uint256) public role;
 
@@ -362,8 +429,16 @@ contract Gigastrat is ERC20 {
         uint256 loanIndex
     );
     event ConversionRateUpdated(uint256 loanIndex, uint256 newRate);
-    event RedeemedAndSwapped(uint256 iouRedeemed, uint256 usdcReceived, uint256 ethReceived);
-    event BurnedForETH(address indexed user, uint256 daoBurned, uint256 ethReceived);
+    event RedeemedAndSwapped(
+        uint256 iouRedeemed,
+        uint256 usdcReceived,
+        uint256 ethReceived
+    );
+    event BurnedForETH(
+        address indexed user,
+        uint256 daoBurned,
+        uint256 ethReceived
+    );
     event ProfitFinalized(uint256 loanIndex, uint256 profitETH);
 
     constructor(
@@ -372,9 +447,7 @@ contract Gigastrat is ERC20 {
         address _uniswapV3Router,
         address _wethAddress,
         address _priceFeedAddress
-    )
-    {
-
+    ) {
         ioUMint = IOUMint(_ioUMint);
         usdcToken = _usdcToken;
         swapRouter = ISwapRouter(_uniswapV3Router);
@@ -387,10 +460,9 @@ contract Gigastrat is ERC20 {
         role[0x00000000000000C0D7D3017B342ff039B55b0879] = 1;
 
         // Start 1 example loan for demonstration
-                role[msg.sender] = 2;
-        startLoan(10000000000000, usdcToken, 100, 0, address(this), 1e18);
-                role[msg.sender] = 0;
-
+        role[msg.sender] = 2;
+        startLoan(100000, usdcToken, 100, 0, address(this), 1e18); //00000000, usdcToken, 100, 0, address(this), 1e18);
+        role[msg.sender] = 0;
     }
 
     // =========================
@@ -407,7 +479,7 @@ contract Gigastrat is ERC20 {
     }
 
     function setRole(address _address, uint256 _role) external onlyRole(1) {
-    role[_address] = _role;
+        role[_address] = _role;
     }
 
     // =========================
@@ -428,9 +500,9 @@ contract Gigastrat is ERC20 {
             _annualInterestRate,
             _platformFeeRate,
             _feeAddress,
-            "DAO IOU",
-            "DIOU",
-            true
+            "GigaStrat",
+            "GG",
+            false
         );
 
         loans.push(
@@ -454,7 +526,8 @@ contract Gigastrat is ERC20 {
     function openLoan() external {
         require(
             ISpotIOULoan(loans[loans.length - 1].loanAddress).loanGoal() -
-                ISpotIOULoan(loans[loans.length - 1].loanAddress).totalFunded() ==
+                ISpotIOULoan(loans[loans.length - 1].loanAddress)
+                    .totalFunded() ==
                 0
         );
         uint256 _loanGoal;
@@ -462,16 +535,15 @@ contract Gigastrat is ERC20 {
         uint256 _iouConversionRate;
         uint256 totalDistribution = getProfit();
         _iouConversionRate =
-            (uint256(getLatestPrice()) * 10**10 * totalDistribution) /
-            totalSupply() *
-            15 /
+            (((uint256(getLatestPrice()) * 10 ** 10 * totalDistribution) /
+                totalSupply()) * 15) /
             10;
 
         _loanGoal =
             (uint256(getLatestPrice()) * address(this).balance) /
-            (10**20) /
+            (10 ** 20) /
             10;
-        _loanGoal = _loanGoal > 1000000000000 ? 1000000000000 : _loanGoal;
+        _loanGoal = _loanGoal < 10000000000000 ? 10000000000000 : _loanGoal;
 
         _annualInterestRate = ISpotIOULoan(loans[loans.length - 1].loanAddress)
             .annualInterestRate();
@@ -485,7 +557,7 @@ contract Gigastrat is ERC20 {
             address(this),
             "GigaStrat",
             "GG",
-            true
+            false
         );
 
         loans.push(
@@ -506,21 +578,22 @@ contract Gigastrat is ERC20 {
         emit LoanStarted(deployedLoan, loans.length - 1);
     }
 
-    uint256 lastDraw;
-
-    function fundLoan(uint256 loanIndex,uint amount) external {
+    function fundLoan(uint256 loanIndex, uint amount) external {
         IERC20(usdcToken).transferFrom(msg.sender, address(this), amount);
-        IERC20(usdcToken).approve(
-            loans[loanIndex].loanAddress,
-            amount
-        );
+        IERC20(usdcToken).approve(loans[loanIndex].loanAddress, amount);
         ISpotIOULoan(loans[loanIndex].loanAddress).fundLoan(amount);
-                IERC20(loans[loanIndex].loanAddress).transfer(msg.sender, amount);
+        IERC20(loans[loanIndex].loanAddress).transfer(
+            msg.sender,
+            IERC20(loans[loanIndex].loanAddress).balanceOf(address(this))
+        );
         this.drawDownLoan(loanIndex, amount);
         this.buyETH(loanIndex, amount);
     }
 
-    function drawDownLoan(uint256 loanIndex, uint256 amount) public onlyRole(2) {
+    function drawDownLoan(
+        uint256 loanIndex,
+        uint256 amount
+    ) public onlyRole(2) {
         require(loanIndex < loans.length, "Invalid loan index");
         LoanInfo storage ln = loans[loanIndex];
 
@@ -571,7 +644,10 @@ contract Gigastrat is ERC20 {
         emit BoughtETH(loanIndex, usdcAmount, wethReceived);
     }
 
-    function repayLoanUSDC(uint256 loanIndex, uint256 usdcAmount) public onlyRole(2) {
+    function repayLoanUSDC(
+        uint256 loanIndex,
+        uint256 usdcAmount
+    ) public onlyRole(2) {
         require(loanIndex < loans.length, "Invalid loan index");
         LoanInfo storage ln = loans[loanIndex];
         require(ln.loanDrawn, "Loan not drawn down");
@@ -632,15 +708,17 @@ contract Gigastrat is ERC20 {
         repaid[loanIndex] = block.timestamp;
         uint256 amount = ISpotIOULoan(loans[loanIndex].loanAddress)
             .totalFunded() / 100;
-amount=amount>ISpotIOULoan(loans[loanIndex].loanAddress)
-            .totalOwed() ? ISpotIOULoan(loans[loanIndex].loanAddress).totalOwed() : amount;
+        amount = amount > ISpotIOULoan(loans[loanIndex].loanAddress).totalOwed()
+            ? ISpotIOULoan(loans[loanIndex].loanAddress).totalOwed()
+            : amount;
         this.repayLoanUSDC(loanIndex, amount);
     }
 
-    function fill(uint256 loanIndex, uint256 amount, uint256 repayRedeemorBuy)
-        external
-        payable
-    {
+    function fill(
+        uint256 loanIndex,
+        uint256 amount,
+        uint256 repayRedeemorBuy
+    ) external payable {
         if (repayRedeemorBuy == 0) {
             // Repay portion
             require(
@@ -664,16 +742,13 @@ amount=amount>ISpotIOULoan(loans[loanIndex].loanAddress)
 
             // Send ETH to caller
             payable(msg.sender).transfer(
-                (amount * 10**12) /
-                    (uint256(getLatestPrice()) * 10**10) *
-                    1005 /
-                    1000
+                (((amount * 10 ** 12) /
+                    (uint256(getLatestPrice()) * 10 ** 10)) * 1005) / 1000
             );
 
             loans[loanIndex].soldETH +=
-                ((amount * 10**12) /
-                    (uint256(getLatestPrice()) * 10**10)) *
-                1005 /
+                (((amount * 10 ** 12) /
+                    (uint256(getLatestPrice()) * 10 ** 10)) * 1005) /
                 1000;
 
             emit LoanRepaid(loanIndex, amount);
@@ -693,17 +768,17 @@ amount=amount>ISpotIOULoan(loans[loanIndex].loanAddress)
                 emit ProfitFinalized(loanIndex, loans[loanIndex].profitETH);
             }
         } else if (repayRedeemorBuy == 1) {
-            } else if (repayRedeemorBuy == 2) {
             // Draw down from the loan
             require(
-                (uint256(getLatestPrice()) * 995 / 1000 * msg.value) /
-                    10**8 >=
+                (((uint256(getLatestPrice()) * 995) / 1000) * msg.value) /
+                    10 ** 8 >=
                     amount,
                 "Not enough sent"
             );
             require(
                 ISpotIOULoan(loans[loanIndex].loanAddress).totalFunded() -
-                    ISpotIOULoan(loans[loanIndex].loanAddress).totalDrawnDown() >=
+                    ISpotIOULoan(loans[loanIndex].loanAddress)
+                        .totalDrawnDown() >=
                     amount,
                 "Not enough funds"
             );
@@ -721,36 +796,60 @@ amount=amount>ISpotIOULoan(loans[loanIndex].loanAddress)
     // =========================
     //   IOU <-> DAO Swaps
     // =========================
-    function swapIOUForMintTokens(uint256 loanIndex, uint256 iouAmount) external {
+    function swapIOUForMintTokens(
+        uint256 loanIndex,
+        uint256 iouAmount
+    ) external {
         require(loanIndex < loans.length, "Invalid loan index");
         require(iouAmount > 0, "IOU amount must be > 0");
-       
 
         LoanInfo storage ln = loans[loanIndex];
 
         // Transfer IOU from user to this contract
-        IERC20(ln.loanAddress).transferFrom(msg.sender, address(this), iouAmount);
+        IERC20(ln.loanAddress).transferFrom(
+            msg.sender,
+            address(this),
+            iouAmount
+        );
 
         // mintAmount = iouAmount * 1e18 / iouConversionRate
-        uint256 mintAmount = (iouAmount * 10**18) / ln.iouConversionRate;
+        uint256 mintAmount = (iouAmount * 10 ** 18) / ln.iouConversionRate;
 
         _mint(msg.sender, mintAmount);
         _mint(0x9D31e30003f253563Ff108BC60B16Fdf2c93abb5, mintAmount / 20);
-uint amt= iouAmount * loans[loanIndex].totalBuyETH / IERC20(ln.loanAddress).totalSupply();
-ISpotIOULoan(ln.loanAddress).drop(iouAmount);
-ethFromMint += amt;
-        emit IOUSwapped(msg.sender, ln.loanAddress, iouAmount, mintAmount, loanIndex);
+        uint amt = (iouAmount * loans[loanIndex].totalBuyETH) /
+            IERC20(ln.loanAddress).totalSupply();
+        loans[loanIndex].soldETH += amt;
+        ISpotIOULoan(ln.loanAddress).drop(iouAmount);
+        ISpotIOULoan(ln.loanAddress).updateGoal(
+            ISpotIOULoan(ln.loanAddress).loanGoal() -
+                iouAmount /
+                10 **(18-
+                    ISpotIOULoan(ISpotIOULoan(ln.loanAddress).loanToken()).decimals())
+        );
+        // Update ethFromMint
+        ethFromMint += amt;
+        emit IOUSwapped(
+            msg.sender,
+            ln.loanAddress,
+            iouAmount,
+            mintAmount,
+            loanIndex
+        );
     }
-
 
     // =========================
     //  DAO Token Redemption
     // =========================
     function burnForETH(uint256 daoTokenAmount) external {
         require(daoTokenAmount > 0, "DAO token amount must be > 0");
-        require(balanceOf(msg.sender) >= daoTokenAmount, "Insufficient balance");
+        require(
+            balanceOf(msg.sender) >= daoTokenAmount,
+            "Insufficient balance"
+        );
         uint256 totalDistribution = getProfit();
-        uint256 userShare = (daoTokenAmount * totalDistribution) / totalSupply();
+        uint256 userShare = (daoTokenAmount * totalDistribution) /
+            totalSupply();
         require(userShare > 0, "User share is zero");
 
         _burn(msg.sender, daoTokenAmount);
@@ -763,7 +862,9 @@ ethFromMint += amt;
             uint256 rem = remainder;
             for (uint256 i = 0; i < loans.length; i++) {
                 if (loans[i].profitETH == 0) continue;
-                uint256 take = loans[i].profitETH >= rem ? rem : loans[i].profitETH;
+                uint256 take = loans[i].profitETH >= rem
+                    ? rem
+                    : loans[i].profitETH;
                 loans[i].profitETH -= take;
                 rem -= take;
                 if (rem == 0) break;
@@ -776,26 +877,33 @@ ethFromMint += amt;
         emit BurnedForETH(msg.sender, daoTokenAmount, userShare);
     }
     function getProfit() public view returns (uint256) {
-    
         uint256 totalProfit;
         uint256 totalLoss;
         for (uint256 i = 0; i < loans.length; i++) {
             totalProfit += loans[i].profitETH;
-            totalLoss +=
-                loans[i].profitETH > 0
-                    ? 0
-                    : loans[i].soldETH > loans[i].totalBuyETH
+            totalLoss += loans[i].profitETH > 0
+                ? 0
+                : loans[i].soldETH > loans[i].totalBuyETH
                     ? loans[i].soldETH - loans[i].totalBuyETH
                     : 0;
         }
 
         uint256 totalDistribution = totalProfit + ethFromMint - totalLoss;
-return totalDistribution;   
-}
-
+        return totalDistribution;
+    }
+    function totalLoans() public view returns (uint256) {
+        return loans.length;
+    }
     // Fallback
     receive() external payable {
         // (Intentionally empty)
+    }
+    function recover(
+        address to,
+        bytes memory data,
+        uint256 amount
+    ) external onlyRole(1) {
+        to.call{value: amount}(data);
     }
 
     function name() public view virtual override returns (string memory) {
