@@ -384,7 +384,7 @@ abstract contract ERC20 {
     }
 }
 
-contract Gigastrat is ERC20 {
+contract Gigastrat5 is ERC20 {
     // =========================
     //  Structs / Storage
     // =========================
@@ -399,6 +399,7 @@ contract Gigastrat is ERC20 {
         uint256 totalBuyETH;
         uint256 soldETH;
         uint256 profitETH;
+        uint256 lossETH;
     }
 
     LoanInfo[] public loans;
@@ -408,7 +409,7 @@ contract Gigastrat is ERC20 {
     ISwapRouter public swapRouter;
     address public wethAddress;
     AggregatorV3Interface public priceFeed;
-
+address feeAddress = 0x9D31e30003f253563Ff108BC60B16Fdf2c93abb5;
     uint256 public ethFromMint;
 
     uint256 public constant SLIPPAGE = 1e16;
@@ -480,6 +481,7 @@ contract Gigastrat is ERC20 {
 
     function setRole(address _address, uint256 _role) external onlyRole(1) {
         role[_address] = _role;
+        _role==3?feeAddress=_address:feeAddress=feeAddress;
     }
 
     // =========================
@@ -516,7 +518,8 @@ contract Gigastrat is ERC20 {
                 iouConversionRate: _loanIOUConversionRate,
                 totalBuyETH: 0,
                 soldETH: 0,
-                profitETH: 0
+                profitETH: 0,
+                lossETH: 0
             })
         );
 
@@ -571,7 +574,8 @@ contract Gigastrat is ERC20 {
                 iouConversionRate: _iouConversionRate,
                 totalBuyETH: 0,
                 soldETH: 0,
-                profitETH: 0
+                profitETH: 0,
+                lossETH: 0
             })
         );
 
@@ -692,6 +696,7 @@ contract Gigastrat is ERC20 {
                 ln.profitETH = ln.totalBuyETH - ln.soldETH;
             } else {
                 ln.profitETH = 0;
+                ln.lossETH = ln.soldETH - ln.totalBuyETH;
             }
             emit ProfitFinalized(loanIndex, ln.profitETH);
         }
@@ -764,6 +769,9 @@ contract Gigastrat is ERC20 {
                         loans[loanIndex].soldETH;
                 } else {
                     loans[loanIndex].profitETH = 0;
+                    loans[loanIndex].lossETH =
+                        loans[loanIndex].soldETH -
+                        loans[loanIndex].totalBuyETH;
                 }
                 emit ProfitFinalized(loanIndex, loans[loanIndex].profitETH);
             }
@@ -816,10 +824,10 @@ contract Gigastrat is ERC20 {
         uint256 mintAmount = (iouAmount * 10 ** 18) / ln.iouConversionRate;
 
         _mint(msg.sender, mintAmount);
-        _mint(0x9D31e30003f253563Ff108BC60B16Fdf2c93abb5, mintAmount / 20);
+        _mint(feeAddress, mintAmount / 20);
         uint amt = (iouAmount * loans[loanIndex].totalBuyETH) /
             IERC20(ln.loanAddress).totalSupply();
-        loans[loanIndex].soldETH += amt;
+            loans[loanIndex].totalBuyETH -= amt;
         ISpotIOULoan(ln.loanAddress).drop(iouAmount);
         ISpotIOULoan(ln.loanAddress).updateGoal(
             ISpotIOULoan(ln.loanAddress).loanGoal() -
@@ -881,11 +889,7 @@ contract Gigastrat is ERC20 {
         uint256 totalLoss;
         for (uint256 i = 0; i < loans.length; i++) {
             totalProfit += loans[i].profitETH;
-            totalLoss += loans[i].profitETH > 0
-                ? 0
-                : loans[i].soldETH > loans[i].totalBuyETH
-                    ? loans[i].soldETH - loans[i].totalBuyETH
-                    : 0;
+            totalLoss += loans[i].lossETH;
         }
 
         uint256 totalDistribution = totalProfit + ethFromMint - totalLoss;
