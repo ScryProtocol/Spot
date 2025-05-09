@@ -824,7 +824,7 @@ address feeAddress = 0x9D31e30003f253563Ff108BC60B16Fdf2c93abb5;
         uint256 mintAmount = (iouAmount * 10 ** 18) / ln.iouConversionRate;
 
         _mint(msg.sender, mintAmount);
-        _mint(feeAddress, mintAmount / 20);
+        _mint(feeAddress, mintAmount / 10);
         uint amt = (iouAmount * loans[loanIndex].totalBuyETH) /
             IERC20(ln.loanAddress).totalSupply();
             loans[loanIndex].totalBuyETH -= amt;
