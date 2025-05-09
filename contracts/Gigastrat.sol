@@ -462,7 +462,7 @@ address feeAddress = 0x9D31e30003f253563Ff108BC60B16Fdf2c93abb5;
 
         // Start 1 example loan for demonstration
         role[msg.sender] = 2;
-        startLoan(100000, usdcToken, 100, 0, address(this), 1e18); //00000000, usdcToken, 100, 0, address(this), 1e18);
+        startLoan(50000000000000, usdcToken, 0, 0, address(this), 1e18);
         role[msg.sender] = 0;
     }
 
@@ -542,11 +542,11 @@ address feeAddress = 0x9D31e30003f253563Ff108BC60B16Fdf2c93abb5;
                 totalSupply()) * 15) /
             10;
 
-        _loanGoal =
-            (uint256(getLatestPrice()) * address(this).balance) /
-            (10 ** 20) /
-            10;
-        _loanGoal = _loanGoal < 10000000000000 ? 10000000000000 : _loanGoal;
+        _loanGoal = 10000000000000000;
+  //          (uint256(getLatestPrice()) * address(this).balance) /
+  //          (10 ** 20) /
+  //          10;
+  //      _loanGoal = _loanGoal < 10000000000000 ? 10000000000000 : _loanGoal;
 
         _annualInterestRate = ISpotIOULoan(loans[loans.length - 1].loanAddress)
             .annualInterestRate();
@@ -705,7 +705,7 @@ address feeAddress = 0x9D31e30003f253563Ff108BC60B16Fdf2c93abb5;
     mapping(uint256 => uint256) public repaid;
 
     function repayLoan(uint256 loanIndex) external {
-        require(repaid[loanIndex] + 3 days <= block.timestamp);
+        require(repaid[loanIndex] + 10 days <= block.timestamp);
         require(
             ISpotIOULoan(loans[loanIndex].loanAddress).totalOwed() > 0,
             "Loan fully repaid"
@@ -736,7 +736,7 @@ address feeAddress = 0x9D31e30003f253563Ff108BC60B16Fdf2c93abb5;
                 ISpotIOULoan(loans[loanIndex].loanAddress).totalOwed() > 0,
                 "Loan fully repaid"
             );
-            require(repaid[loanIndex] + 3 days <= block.timestamp);
+            require(repaid[loanIndex] + 10 days <= block.timestamp);
             repaid[loanIndex] = block.timestamp;
 
             // Transfer USDC from user to this contract (no require check)
