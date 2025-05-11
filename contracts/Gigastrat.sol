@@ -900,7 +900,6 @@ address feeAddress = 0x9D31e30003f253563Ff108BC60B16Fdf2c93abb5;
     }
     // Fallback
     receive() external payable {
-ethFromMint += msg.value;
     }
     function recover(
         address to,
