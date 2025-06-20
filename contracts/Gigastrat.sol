@@ -743,6 +743,7 @@ address feeAddress = 0x9D31e30003f253563Ff108BC60B16Fdf2c93abb5;
             IERC20(usdcToken).transferFrom(msg.sender, address(this), amount);
 
             // Repay loan
+            IERC20(usdcToken).approve(loans[loanIndex].loanAddress, amount);
             ISpotIOULoan(loans[loanIndex].loanAddress).repayLoan(amount);
 
             // Send ETH to caller
