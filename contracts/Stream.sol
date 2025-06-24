@@ -81,6 +81,7 @@ contract Stream {
         uint256 window;
         uint256 timestamp;
         bool once;
+        //string memo;
     }
 
     mapping(bytes32 => StreamDetails) public streamDetails;
@@ -124,7 +125,8 @@ contract Stream {
         address recipient,
         uint256 amount,
         uint256 window,
-        bool once
+        bool once//,
+        //string memory memo
     ) public {
         bytes32 hash = computeHash(msg.sender, token, recipient);
         if (streamDetails[hash].streamer == address(0)) {
@@ -137,7 +139,8 @@ contract Stream {
                 allowable: amount,
                 window: window,
                 timestamp: block.timestamp,
-                once: once
+                once: once//,
+//memo: memo
             });
             streamDetailsByStreamer[msg.sender].push(hash);
             streamDetailsByRecipient[recipient].push(hash);
@@ -187,7 +190,8 @@ contract Stream {
         address[] calldata recipients,
         uint256[] calldata amounts,
         uint256[] calldata windows,
-        bool[] calldata onces
+        bool[] calldata onces//,
+        //string[] calldata memos
     ) external {
         require(
             tokens.length == recipients.length &&
@@ -203,7 +207,8 @@ contract Stream {
                 recipients[i],
                 amounts[i],
                 windows[i],
-                onces[i]
+                onces[i]//,
+                //memos[i]
             );
         }
     }
@@ -398,7 +403,8 @@ contract Stream {
             uint8[] memory decimals,
             string[] memory tokenNames,
             string[] memory tokenSymbols,
-            StreamDetails[] memory details
+            StreamDetails[] memory details,
+            bool[] memory canStream
         )
     {
         uint length = hashes.length;
@@ -430,7 +436,9 @@ contract Stream {
             );
             tokenSymbols[i] = data.length>0 ? abi.decode(data, (string)) : "";
         }
-        return (availableAmounts, decimals, tokenNames, tokenSymbols, details);
+        canStream = new bool[](length);
+        (canStream,,) = getStreamable(hashes);
+        return (availableAmounts, decimals, tokenNames, tokenSymbols, details, canStream);
     }
     function getStreamable(
         bytes32[] calldata hashes

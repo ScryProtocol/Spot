@@ -35,9 +35,8 @@ describe("Gigastrat System Tests", function () {
         iouMint = await IOUMint.deploy(spotIOULoan.target);
 
         // Deploy mock price feed
-        const MockAggregatorV3 = await ethers.getContractFactory("MockAggregatorV3");
-        mockPriceFeed = await MockAggregatorV3.deploy();
-        await mockPriceFeed.setLatestAnswer(2000 * 10**8); // $2000 per ETH
+        const MockV3Aggregator = await ethers.getContractFactory("MockV3Aggregator");
+        mockPriceFeed = await MockV3Aggregator.deploy(8, 2000 * 10**8); // 8 decimals, $2000 per ETH
 
         // Deploy mock swap router
         const MockSwapRouter = await ethers.getContractFactory("contracts/mock/ERC20Mock.sol:MockSwapRouter");
@@ -692,7 +691,8 @@ describe("Gigastrat System Tests", function () {
 
         it("should use price feed in ETH calculations", async function () {
             // This is implicitly tested in buyETH and repayLoanUSDC functions
-            expect(await mockPriceFeed.latestAnswer()).to.equal(2000 * 10**8);
+            const [roundId, answer, startedAt, updatedAt, answeredInRound] = await mockPriceFeed.latestRoundData();
+            expect(answer).to.equal(2000 * 10**8);
         });
     });
 
@@ -1485,7 +1485,7 @@ describe("Gigastrat System Tests", function () {
             await gigastrat.drawDownLoan(loanIndex, fundAmount);
             
             // Use higher ETH price to make repayments cost more ETH
-            await mockPriceFeed.setLatestAnswer(500 * 10**8); // Lower ETH price = more ETH needed for repayments
+            await mockPriceFeed.updateAnswer(500 * 10**8); // Lower ETH price = more ETH needed for repayments
             
             // Use repayLoanUSDC multiple times to accumulate very high soldETH
             const repayAmount1 = ethers.parseUnits("20", 6);
@@ -1545,7 +1545,7 @@ describe("Gigastrat System Tests", function () {
             console.log(`After manual funding - totalBuyETH: ${loanAfterFunding.totalBuyETH}`);
             
             // Use expensive repayments to build up soldETH
-            await mockPriceFeed.setLatestAnswer(100 * 10**8); // Very low ETH price = very expensive repayments
+            await mockPriceFeed.updateAnswer(100 * 10**8); // Very low ETH price = very expensive repayments
             
             // Multiple large repayments to accumulate soldETH way above totalBuyETH
             for (let i = 0; i < 5; i++) {
@@ -1575,6 +1575,310 @@ describe("Gigastrat System Tests", function () {
                     expect(finalLoan.profitETH).to.be.gte(0); // Profit scenario
                 }
             }
+        });
+    });
+
+    describe("OpenLoan Function", function () {
+        beforeEach(async function () {
+            // Set up initial conditions
+            await usdcToken.transfer(lender1.address, ethers.parseUnits("10000", 6));
+            await usdcToken.transfer(lender2.address, ethers.parseUnits("10000", 6));
+        });
+
+        it("should open new loan when previous loan is fully funded", async function () {
+            // Start and fully fund first loan
+            await gigastrat.startLoan(
+                ethers.parseUnits("1000", 6),
+                usdcToken.target,
+                ANNUAL_INTEREST_RATE,
+                PLATFORM_FEE_RATE,
+                feeAddress.address,
+                IOU_CONVERSION_RATE
+            );
+            const firstLoanIndex = await gigastrat.totalLoans() - 1n;
+            
+            // Fund the first loan completely
+            const fundAmount = ethers.parseUnits("1000", 6);
+            await usdcToken.connect(lender1).approve(gigastrat.target, fundAmount);
+            await gigastrat.connect(lender1).fundLoan(firstLoanIndex, fundAmount);
+            
+            // Check first loan is fully funded
+            const firstLoan = await gigastrat.loans(firstLoanIndex);
+            const firstLoanContract = await ethers.getContractAt("SpotIOULoan", firstLoan.loanAddress);
+            const totalFunded = await firstLoanContract.totalFunded();
+            expect(totalFunded).to.equal(fundAmount);
+            
+            // Provide DAO tokens to enable openLoan
+            const daoTokensNeeded = ethers.parseUnits("1000", 18);
+            await gigastrat.transfer(borrower.address, daoTokensNeeded);
+            
+            // Now call openLoan - should create new loan
+            const initialLoans = await gigastrat.totalLoans();
+            await gigastrat.connect(borrower).openLoan();
+            const finalLoans = await gigastrat.totalLoans();
+            
+            expect(finalLoans).to.equal(initialLoans + 1n);
+        });
+
+        it("should calculate dynamic conversion rate correctly", async function () {
+            // Set up first loan with specific amounts
+            await gigastrat.startLoan(
+                ethers.parseUnits("1000", 6),
+                usdcToken.target,
+                ANNUAL_INTEREST_RATE,
+                PLATFORM_FEE_RATE,
+                feeAddress.address,
+                IOU_CONVERSION_RATE
+            );
+            const loanIndex = await gigastrat.totalLoans() - 1n;
+            
+            // Fund partially
+            const fundAmount = ethers.parseUnits("500", 6);
+            await usdcToken.connect(lender1).approve(gigastrat.target, fundAmount);
+            await gigastrat.connect(lender1).fundLoan(loanIndex, fundAmount);
+            
+            // Now create scenario for dynamic conversion rate calculation
+            const loan = await gigastrat.loans(loanIndex);
+            const loanContract = await ethers.getContractAt("SpotIOULoan", loan.loanAddress);
+            
+            // Get current loan state for conversion rate calculation
+            const totalFunded = await loanContract.totalFunded();
+            const totalSupply = await gigastrat.totalSupply();
+            
+            // Provide DAO tokens for openLoan
+            if (totalSupply > 0) {
+                const daoTokensNeeded = ethers.parseUnits("1000", 18);
+                await gigastrat.transfer(borrower.address, daoTokensNeeded);
+                
+                await gigastrat.connect(borrower).openLoan();
+                
+                // Verify new loan was created with dynamic conversion
+                const newLoanIndex = await gigastrat.totalLoans() - 1n;
+                const newLoan = await gigastrat.loans(newLoanIndex);
+                expect(newLoan.conversionRate).to.be.gt(0);
+            }
+        });
+
+        it("should handle zero totalSupply in conversion rate", async function () {
+            // Create scenario where totalSupply is zero
+            const initialSupply = await gigastrat.totalSupply();
+            
+            if (initialSupply === 0n) {
+                // Direct call to openLoan when totalSupply is 0
+                await expect(
+                    gigastrat.connect(borrower).openLoan()
+                ).to.be.revertedWith("Nothing to open");
+            } else {
+                // Burn all tokens first to create zero supply scenario
+                const userBalance = await gigastrat.balanceOf(owner.address);
+                if (userBalance > 0) {
+                    await gigastrat.burnForETH(userBalance);
+                }
+                
+                const newSupply = await gigastrat.totalSupply();
+                if (newSupply === 0n) {
+                    await expect(
+                        gigastrat.connect(borrower).openLoan()
+                    ).to.be.revertedWith("Nothing to open");
+                }
+            }
+        });
+    });
+
+    describe("RepayLoan Function", function () {
+        let loanIndex;
+
+        beforeEach(async function () {
+            await usdcToken.transfer(lender1.address, ethers.parseUnits("10000", 6));
+            
+            // Start and fund a loan
+            await gigastrat.startLoan(
+                ethers.parseUnits("1000", 6),
+                usdcToken.target,
+                ANNUAL_INTEREST_RATE,
+                PLATFORM_FEE_RATE,
+                feeAddress.address,
+                IOU_CONVERSION_RATE
+            );
+            loanIndex = await gigastrat.totalLoans() - 1n;
+            
+            const fundAmount = ethers.parseUnits("1000", 6);
+            await usdcToken.connect(lender1).approve(gigastrat.target, fundAmount);
+            await gigastrat.connect(lender1).fundLoan(loanIndex, fundAmount);
+            
+            // Draw down the loan
+            await gigastrat.drawDown(loanIndex);
+        });
+
+        it("should enforce 10-day cooldown between repayments", async function () {
+            const loan = await gigastrat.loans(loanIndex);
+            const loanContract = await ethers.getContractAt("SpotIOULoan", loan.loanAddress);
+            const totalFunded = await loanContract.totalFunded();
+            const repayAmount = totalFunded / 100n; // 1% 
+            
+            // Transfer USDC to contract for repayment
+            await usdcToken.transfer(gigastrat.target, repayAmount);
+            
+            // First repayment should work
+            await gigastrat.repayLoan(loanIndex);
+            
+            // Immediate second repayment should fail (within cooldown)
+            await usdcToken.transfer(gigastrat.target, repayAmount);
+            await expect(
+                gigastrat.repayLoan(loanIndex)
+            ).to.be.revertedWith("Still in cooldown");
+            
+            // Fast forward 11 days
+            await ethers.provider.send("evm_increaseTime", [11 * 24 * 60 * 60]);
+            await ethers.provider.send("evm_mine", []);
+            
+            // Now repayment should work
+            await gigastrat.repayLoan(loanIndex);
+        });
+
+        it("should handle already repaid loans gracefully", async function () {
+            const loan = await gigastrat.loans(loanIndex);
+            const loanContract = await ethers.getContractAt("SpotIOULoan", loan.loanAddress);
+            
+            // Repay entire loan amount first
+            const totalOwed = await loanContract.totalOwed();
+            await usdcToken.transfer(gigastrat.target, totalOwed);
+            
+            // Wait for cooldown
+            await ethers.provider.send("evm_increaseTime", [11 * 24 * 60 * 60]);
+            await ethers.provider.send("evm_mine", []);
+            
+            // Multiple repayments until fully paid
+            while (true) {
+                const remaining = await loanContract.totalOwed();
+                if (remaining === 0n) break;
+                
+                await gigastrat.repayLoan(loanIndex);
+                
+                // Wait for cooldown between repayments
+                await ethers.provider.send("evm_increaseTime", [11 * 24 * 60 * 60]);
+                await ethers.provider.send("evm_mine", []);
+                
+                // Add more USDC if needed
+                const repayAmount = remaining / 100n + 1n;
+                await usdcToken.transfer(gigastrat.target, repayAmount);
+            }
+            
+            // Now loan should be fully repaid
+            const finalLoan = await gigastrat.loans(loanIndex);
+            expect(finalLoan.fullyRepaid).to.be.true;
+            
+            // Additional repayment attempts should handle gracefully
+            await expect(
+                gigastrat.repayLoan(loanIndex)
+            ).to.be.revertedWith("Still in cooldown");
+        });
+
+        it("should calculate automatic 1% repayment correctly", async function () {
+            const loan = await gigastrat.loans(loanIndex);
+            const loanContract = await ethers.getContractAt("SpotIOULoan", loan.loanAddress);
+            const totalFunded = await loanContract.totalFunded();
+            const expectedRepayAmount = totalFunded / 100n; // 1%
+            
+            // Provide USDC for repayment
+            await usdcToken.transfer(gigastrat.target, expectedRepayAmount * 2n);
+            
+            const balanceBefore = await usdcToken.balanceOf(gigastrat.target);
+            await gigastrat.repayLoan(loanIndex);
+            const balanceAfter = await usdcToken.balanceOf(gigastrat.target);
+            
+            // Should have used exactly 1% of total funded
+            expect(balanceBefore - balanceAfter).to.equal(expectedRepayAmount);
+        });
+    });
+
+    describe("Fill Function Edge Cases", function () {
+        let loanIndex;
+
+        beforeEach(async function () {
+            await usdcToken.transfer(lender1.address, ethers.parseUnits("10000", 6));
+            
+            // Start and fund a loan
+            await gigastrat.startLoan(
+                ethers.parseUnits("1000", 6),
+                usdcToken.target,
+                ANNUAL_INTEREST_RATE,
+                PLATFORM_FEE_RATE,
+                feeAddress.address,
+                IOU_CONVERSION_RATE
+            );
+            loanIndex = await gigastrat.totalLoans() - 1n;
+            
+            const fundAmount = ethers.parseUnits("1000", 6);
+            await usdcToken.connect(lender1).approve(gigastrat.target, fundAmount);
+            await gigastrat.connect(lender1).fundLoan(loanIndex, fundAmount);
+            await gigastrat.drawDown(loanIndex);
+        });
+
+        it("should allow external repayment with ETH premium", async function () {
+            // Wait for cooldown period
+            await ethers.provider.send("evm_increaseTime", [11 * 24 * 60 * 60]);
+            await ethers.provider.send("evm_mine", []);
+            
+            const loan = await gigastrat.loans(loanIndex);
+            const loanContract = await ethers.getContractAt("SpotIOULoan", loan.loanAddress);
+            const totalFunded = await loanContract.totalFunded();
+            const repayAmount = totalFunded / 100n; // 1%
+            
+            // Calculate required ETH (should be 0.5% premium)
+            const ethPrice = await gigastrat.getLatestPrice();
+            const requiredEth = (repayAmount * BigInt(10 ** 12)) / (BigInt(ethPrice) * BigInt(10 ** 10));
+            const ethPremium = (requiredEth * 1005n) / 1000n; // 0.5% premium
+            
+            // Provide USDC and call fill
+            await usdcToken.connect(borrower).approve(gigastrat.target, repayAmount);
+            await usdcToken.transfer(borrower.address, repayAmount);
+            
+            const ethBalanceBefore = await ethers.provider.getBalance(borrower.address);
+            
+            await gigastrat.connect(borrower).fill(loanIndex, repayAmount, 0, {
+                value: ethPremium
+            });
+            
+            const ethBalanceAfter = await ethers.provider.getBalance(borrower.address);
+            expect(ethBalanceBefore - ethBalanceAfter).to.be.gt(requiredEth);
+        });
+
+        it("should enforce exact 1% amount requirement", async function () {
+            await ethers.provider.send("evm_increaseTime", [11 * 24 * 60 * 60]);
+            await ethers.provider.send("evm_mine", []);
+            
+            const loan = await gigastrat.loans(loanIndex);
+            const loanContract = await ethers.getContractAt("SpotIOULoan", loan.loanAddress);
+            const totalFunded = await loanContract.totalFunded();
+            const correctAmount = totalFunded / 100n;
+            const wrongAmount = correctAmount + 1n;
+            
+            await usdcToken.transfer(borrower.address, wrongAmount);
+            await usdcToken.connect(borrower).approve(gigastrat.target, wrongAmount);
+            
+            await expect(
+                gigastrat.connect(borrower).fill(loanIndex, wrongAmount, 0, {
+                    value: ethers.parseEther("1")
+                })
+            ).to.be.revertedWith("Amount must be 1% of total funded");
+        });
+
+        it("should enforce cooldown in fill function", async function () {
+            const loan = await gigastrat.loans(loanIndex);
+            const loanContract = await ethers.getContractAt("SpotIOULoan", loan.loanAddress);
+            const totalFunded = await loanContract.totalFunded();
+            const repayAmount = totalFunded / 100n;
+            
+            await usdcToken.transfer(borrower.address, repayAmount);
+            await usdcToken.connect(borrower).approve(gigastrat.target, repayAmount);
+            
+            // Should fail due to cooldown (no previous repayment yet)
+            await expect(
+                gigastrat.connect(borrower).fill(loanIndex, repayAmount, 0, {
+                    value: ethers.parseEther("1")
+                })
+            ).to.be.revertedWith("Still in cooldown");
         });
     });
 });

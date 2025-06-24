@@ -635,9 +635,9 @@ await vault.connect(owner).confirmTransaction(2);
     
         // 9. Testing 'updateVaultImplementation' in VaultFactory2
         it("should update vault implementation in VaultFactory2", async function () {
-            // Deploy a new Vault2 implementation
-            const NewVault2 = await ethers.getContractFactory("Vault2");
-            const newVaultImplementation = await NewVault2.deploy();
+            // Deploy a new Vault implementation (not Vault2)
+            const NewVault = await ethers.getContractFactory("Vault");
+            const newVaultImplementation = await NewVault.deploy();
     
             // Update the vault implementation in the factory
             await vaultFactory.updateVaultImplementation(newVaultImplementation.target);
