@@ -31,6 +31,7 @@ interface ISpotIOULoan {
         string memory _name,
         string memory _symbol,
         address _IOUMint,
+        string memory memo_,
         bool _flexible
     ) external;
 
@@ -48,7 +49,6 @@ interface ISpotIOULoan {
     function totalRedeemed() external view returns (uint256);
     function _totalRepayments() external view returns (uint256);
     function _totalPrincipalRepaid() external view returns (uint256);
-
     // Real-time interest
     function viewAccruedInterest() external view returns (uint256);
     function totalOwed() external view returns (uint256);
@@ -64,6 +64,7 @@ interface ISpotIOULoan {
     // Direct function for interest claimable
     function interestClaimable(address user) external view returns (uint256);
     function flexible() external view returns (bool);
+    function memo() external view returns (string memory);
 }
 
 interface IIOUMint {
@@ -133,7 +134,7 @@ contract SpotIOULoan is ERC20 {
     uint256 public repayments;          // principal repaid so far (used in "Version2")
     uint256 public interestrepayments;  // interest repaid so far
     uint256 public totalRedeemed;       // total principal redeemed by IOU holders
-
+string public memo;
     // For interest distribution
     mapping(address => uint256) public lastInterestIndex;
 
@@ -172,6 +173,7 @@ contract SpotIOULoan is ERC20 {
         string memory name_,
         string memory symbol_,
         address _IOUMint,
+        string memory memo_,
         bool _flexible
     ) external {
         // Simple check so we don't double-init
@@ -192,7 +194,7 @@ contract SpotIOULoan is ERC20 {
 
         loanToken = IERC20(_loanToken);
         dec       = ERC20(_loanToken).decimals();
-
+memo = memo_;
         // Overwrite the ERC20 name/symbol if desired
         _name    = name_;
         _symbol  = symbol_;
@@ -331,7 +333,9 @@ contract SpotIOULoan is ERC20 {
         }
         loanGoal = newGoal;
     }
-
+function updateMemo(string memory newMemo) external onlyBorrower {
+        memo = newMemo;
+    }
     // -----------------------------
     // Unfund
     // -----------------------------
@@ -592,6 +596,7 @@ contract IOUMint {
         uint256 interestClaimable;
         uint256 tokensUnderlying;
         uint256 totalRedeemed;
+        string memo;
         bool    flexible;
     }
 
@@ -618,6 +623,7 @@ contract IOUMint {
         address _feeAddress,
         string memory _name,
         string memory _symbol,
+        string memory memo,
         bool    _flexible
     ) external returns (address loanAddress) {
         require(msg.sender == _borrower, "Only borrower can deploy");
@@ -637,6 +643,7 @@ contract IOUMint {
             _name,
             _symbol,
             address(this),
+            memo,
             _flexible
         );
 
@@ -734,7 +741,7 @@ contract IOUMint {
             // Real-time interest
             info.updatedInterest   = loan.viewAccruedInterest();
             info.updatedTotalOwed  = loan.totalOwed();
-
+info.memo = loan.memo();
             // Repayments
             uint256 totalReps      = loan._totalRepayments();
             uint256 principalReps  = loan._totalPrincipalRepaid(); 

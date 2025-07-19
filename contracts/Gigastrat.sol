@@ -59,6 +59,7 @@ interface IOUMint {
         address _feeAddress,
         string memory _name,
         string memory _symbol,
+        string memory _memo,
         bool flexible
     ) external returns (address);
 }
@@ -676,6 +677,7 @@ contract Gigastrat5 is ERC20 {
             _feeAddress,
             "GigaStrat",
             "GG",
+            "Gigastrat Loan",
             false
         );
 
@@ -733,6 +735,7 @@ contract Gigastrat5 is ERC20 {
             address(this),
             "GigaStrat",
             "GG",
+            "Gigastrat Loan",
             false
         );
 
