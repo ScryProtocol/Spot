@@ -59,6 +59,7 @@ interface IOUMint {
         address _feeAddress,
         string memory _name,
         string memory _symbol,
+        string memory _memo,
         bool flexible
     ) external returns (address);
 }
@@ -676,6 +677,7 @@ contract Gigastrat5 is ERC20 {
             _feeAddress,
             "GigaStrat",
             "GG",
+            "Gigastrat Loan",
             false
         );
 
@@ -733,6 +735,7 @@ contract Gigastrat5 is ERC20 {
             address(this),
             "GigaStrat",
             "GG",
+            "Gigastrat Loan",
             false
         );
 
@@ -991,8 +994,8 @@ contract Gigastrat5 is ERC20 {
         _mint(msg.sender, mintAmount);
         if (ref!=address(0)) _mint(feeAddress, mintAmount / 10);
         else {
-            _mint(feeAddress, (mintAmount * 10-refFee) / 100);
-            _mint(feeAddress, (mintAmount * refFee) / 100);
+            _mint(feeAddress, (mintAmount * (10-refFee)) / 100);
+            _mint(ref, (mintAmount * refFee) / 100);
         }
         uint256 amt = (iouAmount * loans[loanIndex].totalBuyETH) / IERC20(ln.loanAddress).totalSupply();
         loans[loanIndex].totalBuyETH -= amt;
