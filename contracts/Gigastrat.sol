@@ -508,6 +508,9 @@ contract Gigastrat5 is ERC20 {
     /// @notice Conversion rate premium for IOU to GG token swaps
     uint256 public conversionRatePrem = 15;
 
+    /// @notice Swap expiration
+    uint256 public swapExp = 365;
+
     /*//////////////////////////////////////////////////////////////
                                CONSTANTS
     //////////////////////////////////////////////////////////////*/
@@ -791,10 +794,7 @@ contract Gigastrat5 is ERC20 {
         ISpotIOULoan(ln.loanAddress).drawDown(amount);
         ln.totalDrawnDown += amount;
 
-        if (!ln.loanDrawn) {
-            ln.loanDrawn = true;
             ln.loanDrawnTime = block.timestamp;
-        }
 
         emit LoanDrawn(amount, block.timestamp, loanIndex);
     }
@@ -984,6 +984,7 @@ contract Gigastrat5 is ERC20 {
     function swapIOUForMintTokens(uint256 loanIndex, uint256 iouAmount,address ref) external {
         require(loanIndex < loans.length, "Invalid loan index");
         require(iouAmount > 0, "IOU amount must be > 0");
+        require(swapExp*1 days + loans[loanIndex].loanDrawnTime >= block.timestamp, "Swap expired");
 
         LoanInfo storage ln = loans[loanIndex];
 
@@ -1084,11 +1085,13 @@ contract Gigastrat5 is ERC20 {
     function setParams(
         uint256 _refFee,
         uint256 _repayDays,
-        uint256 _conversionRatePrem
+        uint256 _conversionRatePrem,
+        uint256 _swapExp
     ) external onlyRole(1) {
         refFee = _refFee<11 ? _refFee : 10; // Ensure maximum 10%
         repayDays = _repayDays>1 ? _repayDays : 1; // Ensure minimum 1 day
         conversionRatePrem = _conversionRatePrem > 10 ? _conversionRatePrem : 10; // Ensure minimum 100%
+        swapExp = _swapExp;
     }
 
     /*//////////////////////////////////////////////////////////////
